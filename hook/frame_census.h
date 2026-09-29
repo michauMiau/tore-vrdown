@@ -109,7 +109,15 @@ static int td_frame_patch(const char *name, void *fn, int slot)
      * no exit, which is what a hard lockup with no Sentry dialog is: the
      * process is not crashing, it is spinning inside a two-instruction cycle.
      *
-     * Read: target = *(void **)(at + 2 + *(int32_t *)(at + 2)). */
+     * Read: target = *(void **)(at + 6 + *(int32_t *)(at + 2)).
+     *
+     * The +6, not +2. RIP inside 'jmp qword ptr [rip+disp32]' is the address of
+     * the NEXT instruction, which is the end of this 6-byte one, so the slot
+     * lives at at+6+disp. Reading at+2+disp is 4 bytes early and produced
+     * "impl a07f4a7000007ffe" -- two concatenated 32-bit halves, not a pointer.
+     * Measured on this machine, at+6+disp gives 00007FFEA23D93EC, a canonical
+     * address inside GDI32.dll, which is what the real implementation must be.
+     * (thunkprobe.c and idataprobe.c are the standalone checks.) */
     if (!(at[0] == 0xFF && at[1] == 0x25)) {
         vr_log("  frame: %s at %p is not a jump thunk (first bytes %02X %02X)"
                " -- NOT patching, a byte-steal here would split an instruction",
@@ -119,7 +127,7 @@ static int td_frame_patch(const char *name, void *fn, int slot)
     int32_t disp;
     memcpy(&disp, at + 2, 4);
     void *real;
-    memcpy(&real, at + 2 + disp, 8);          /* the slot holds the real address */
+    memcpy(&real, at + 6 + disp, 8);          /* RIP is after the whole jmp */
     if (!real || real == fn) {
         vr_log("  frame: %s thunk points at %p (implausible) -- NOT patching",
                name, real);
@@ -227,10 +235,21 @@ static void td_frame_install(void)
         g_frame_slots[i].calls = &g_frame_counts[i];
         unsigned char *a = (unsigned char *)fn;
         if (a[0] == 0xFF && a[1] == 0x25) {
-            int32_t d; memcpy(&d, a + 2, 4);
-            void *impl; memcpy(&impl, a + 2 + d, 8);
-            vr_log("  frame: read-only %-24s thunk %p -> impl %p",
-                   want[k].label, fn, impl);
+            /* Same displacement dance as td_frame_patch, and it is easy to get
+             * wrong twice: the read-only path reported
+             * "impl a07f4a7000007ffe", which is the bytes 7ffe00007ffea07f in
+             * the wrong order -- a 64-bit value assembled from an int and a
+             * pointer as if the int were a low half. The address is at
+             * *(void**)(at + 2 + *(int32_t*)(at + 2)), and nothing else. */
+            int32_t d;
+            memcpy(&d, a + 2, 4);
+            void *impl = NULL;
+            memcpy(&impl, (unsigned char *)a + 6 + d, sizeof impl);   /* +6, see note */
+            unsigned long long hi = ((unsigned long long)(uintptr_t)impl) >> 48;
+            vr_log("  frame: read-only %-24s thunk %p -> impl %p%s",
+                   want[k].label, fn, impl,
+                   (hi == 0 || hi == 0x7ffe || hi == 0x7fff)
+                       ? "" : "  <-- NOT A CANONICAL ADDRESS, thunk layout differs");
         } else {
             vr_log("  frame: read-only %-24s direct code at %p (bytes %02X %02X)",
                    want[k].label, fn, a[0], a[1]);
