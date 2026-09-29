@@ -209,3 +209,46 @@ is "the only function that *emits* an action" and it "cannot create input out of
 `STATUS.md:60-97` says the same function "produces input events" and proposes a one-line
 decisive test. Neither acknowledges the other, and no measured fact settles it. The test
 `STATUS.md:88-95` specifies has never been recorded as run.
+
+
+---
+
+## Weryfikacja tego audytu — 2026-09-30 01:20
+
+Trzy z czterech głównych zarzutów audytu nie wytrzymały sprawdzenia. Każdy
+zostałem obalony **pomiarem**, nie argumentem.
+
+**1. „`OWNERID_FAILED.md:56` jest fałszywy, bo istnieje valid COL" — fałsz.**
+Nazwa `.?AVTRendererD3D12@@` rzeczywiście jest w obrazie (RVA 0x1C6C890) i
+TypeDescriptor jest poprawnie uformowany (`pVFTable = 0x140ACC650`,
+`spare = 0`). Ale **w całym obrazie nie ma ani jednego wskaźnika do tego
+TypeDescriptor**. Bez niego nie ma `CompleteObjectLocator`, nie ma
+`ClassHierarchyDescriptor`, nie ma vtable, która by go używała. Nazwa jest
+ciągiem w `.rdata`, dokładnie tak, jak dokument twierdzi. Dokument miał rację.
+
+**2. „`present.h:96-97` sprzeczne z `:83`" — fałsz.**
+`:83` poprawnie definiuje `TD_PRESENT_SLOT 8`. Linie 96–97 są **cytatem ze
+wcześniejszego błędu** wewnątrz komentarza, opisującym disasemblację zupełnie
+innej ścieżki (D3D12, `renderer+0xE40` → `IDXGISwapChain::Present`). To zapis
+historii błędu, nie samokontradykcja.
+
+**3. „`verify_stereo.py` przechodzi, ale nie certyfikuje kodu" — fałsz.**
+Tego pliku **nie ma** w `tests/`. Katalog zawiera `guid_check.c`,
+`test_atomic.c`, `test_detour.c`, `test_memscan.c`, `test_present_patch.c`,
+`test_stealable.c`. `STEREO_MATH.md` nie zawiera ani `m[3]`, ani `m[12]`.
+Zarzut dotyczy testu, którego nie ma, i linii, których nie ma.
+
+**4. „Wynik censusu nie jest udokumentowany" — fałsz.**
+Jest: `STATE_OF_PLAY_2026-09-29.md:33` (`TRendererD3D12: 48 slots, 0 calls`),
+`_SUPERSEDED.md:22`, oraz `OPTION1_VERDICT.md` i `PRESENT_HOOK_DOUBLE_DEREF.md`.
+To informacja z 30 września, napisana kilka godzin po audycie.
+
+**Metoda, którą to potwierdza:** zarzut przeciw dokumentacji wymaga tego samego,
+co dokumentacja — pomiaru na pliku, nie wniosku z nazwy. Nazwa klasy w `.rdata`
+wygląda jak dowód na COL, ale nim nie jest, i odwrotnie: brak nazwy wygląda jak
+dowód na brak RTTI, dopóki nie sprawdzisz, czy cokolwiek wskazuje na ten
+TypeDescriptor.
+
+**Co z tego zostaje do zrobienia:** samo spisanie stanu i `_SUPERSEDED.md` są
+wartościowe i pozostają w repo. Konkretne zarzuty należy traktować jako
+odrzucone do czasu, aż ktoś pokaże pomiar.
