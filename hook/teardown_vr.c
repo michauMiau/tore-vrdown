@@ -550,7 +550,8 @@ static size_t measure_stealable(void* target, size_t max_len) {
 // build_detour, which is compatible.
 #include "present.h"
 #include "dxgi_probe.h"
-#include "census_dxgi.h"   /* after dxgi_probe.h: it reuses the header-verified
+#include "census_dxgi.h"
+#include "frame_census.h"   /* after dxgi_probe.h: it reuses the header-verified
                             * local IID copies defined there */
 #include "present_hook.h"
 
@@ -1716,6 +1717,11 @@ static DWORD WINAPI census_reporter(LPVOID arg) {
          * report is harder to read than a slightly late one. */
         td_census_report(vr_log);
 #endif
+#if TDVR_FRAME_CENSUS
+        /* Same reasoning, same thread, same cadence: one interleaving-free
+         * report covering every instrument. */
+        td_frame_report();
+#endif
     }
     return 0;
 }
@@ -2023,7 +2029,24 @@ static int install_hooks(void) {
             vr_log("SLOT CENSUS: %d slots instrumented; report every 2 s", installed);
             CreateThread(NULL, 0, census_reporter, NULL, 0, NULL);
         }
+#if TDVR_FRAME_CENSUS
+        else {
+            /* No class census means no reporter thread; without this the frame
+             * counters would be sampled by nobody and every reading would be
+             * 0 -- indistinguishable from "not called", which is the one
+             * conclusion this instrument exists to test. */
+            vr_log("FRAME CENSUS: no class census in this build; its own reporter");
+            CreateThread(NULL, 0, frame_reporter, NULL, 0, NULL);
+        }
+#endif
 #else
+        /* The class census above hooks the engine's own C++ objects, which
+         * measured 48/48 slots at zero while the game rendered. This one hooks
+         * the exported buffer swap instead, and installs whether or not the
+         * class census ran -- they are independent questions. */
+#if TDVR_FRAME_CENSUS
+        td_frame_install();
+#endif
         // Each of the two vtable slots is patched independently, so which one is
         // responsible for the crash can be established by leaving one alone.
         // Patching them through one condition would make that impossible.

@@ -233,7 +233,7 @@
 //     Slots whose first byte is 0xC3 or 0xCC are skipped: those are stub and
 //     padding entries, and wrapping one would fault on the first call.
 #ifndef TDVR_SLOT_CENSUS
-#define TDVR_SLOT_CENSUS 0
+#define TDVR_SLOT_CENSUS 0  /* set to 1 on the command line: see hook/census.h */
 #endif
 
 // 14. Run the DXGI factory probe: create our own IDXGIFactory2, verify which
