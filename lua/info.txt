@@ -1,0 +1,47 @@
+en_name = Teardown VR
+ru_name = Teardown VR
+de_name = Teardown VR
+es_name = Teardown VR
+it_name = Teardown VR
+fr_name = Teardown VR
+jp_name = Teardown VR
+pl_name = Teardown VR
+sc_name = Teardown VR
+
+author = teardown-vr-mod
+
+en_description = VR support layer. Collects per-eye camera parameters and game events, and exposes them to the native VR layer over the shared key-value store.
+ru_description = Слой поддержки VR. Собирает параметры камеры для каждого глаза и игровые события и передаёт их нативному VR-слою через общее хранилище ключей и значений.
+de_description = VR-Unterstützung. Sammelt Kameraparameter pro Auge und Spielereignisse und stellt sie der nativen VR-Schicht über den gemeinsamen Schlüssel-Wert-Speicher bereit.
+es_description = Capa de soporte de VR. Recopila parámetros de cámara por ojo y eventos del juego, y los expone a la capa nativa de VR mediante el almacén compartido de clave-valor.
+it_description = Livello di supporto VR. Raccoglie i parametri della telecamera per occhio e gli eventi di gioco, e li espone al livello VR nativo tramite l'archivio chiave-valore condiviso.
+fr_description = Couche de prise en charge VR. Collecte les paramètres de caméra par œil et les événements de jeu, et les expose à la couche VR native via le stockage clé-valeur partagé.
+jp_name = Teardown VR
+jp_description = VR サポートレイヤー。アイごとのカメラパラメータとゲームイベントを収集し、共有キー値ストア経由でネイティブ VR レイヤーに提供します。
+pl_name = Teardown VR
+pl_description = Warstwa obsługi VR. Zbiera parametry kamery dla każdego oka i zdarzenia gry, oraz udostępnia je natywnej warstwie VR przez wspólny magazyn klucz-wartość.
+sc_name = Teardown VR
+sc_description = VR 支持层。收集每只眼睛的相机参数和游戏事件，并通过共享键值存储将其提供给原生 VR 层。
+
+tags = Gameplay
+
+version = 1
+
+# Lua layers present in this mod:
+#   vrinput.lua   action-driven input: reads controller state published into the
+#                 store and maps it onto the game's own action names through
+#                 the remap table the game itself writes from Lua
+#                 (data/ui/components/input_options_logic.lua does
+#                 SetString("options.input.keymap.<action>", key)). No offsets,
+#                 no FFI. The native half supplies controller state; this half
+#                 decides what it means.
+#   vrhaptics.lua haptics triggers, driven by the engine's own PlayHaptic path
+#   vrcamera.lua  per-eye camera parameters
+#   vrbus.lua     the event protocol
+#   main.lua      init/tick/update/draw glue and the settings overlay
+#
+# Store keys this mod owns, all under the savegame.mod. prefix the engine
+# requires (mods get no private store):
+#   savegame.mod.teardownvr.vr.*         config
+#   savegame.mod.teardownvr.in.<button>  digital input, 0..1
+#   savegame.mod.teardownvr.axis.<axis>  analog input, -1..1

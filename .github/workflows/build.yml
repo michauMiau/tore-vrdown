@@ -1,0 +1,104 @@
+name: build
+
+# Every push and every PR: cross-compile the DLL and the injector, run the
+# offline unit tests, and verify the artifacts are real 64-bit PE files.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: mingw cross-build + unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install mingw-w64
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64
+
+      - name: Show toolchain
+        run: |
+          x86_64-w64-mingw32-gcc --version
+          gcc --version
+
+      - name: Build DLL and injector
+        run: sh build.sh
+
+      # build.sh has a -shared DLL rule and a console EXE rule. If either
+      # silently stopped producing output the steps above would still pass,
+      # so check the files exist and are not empty.
+      - name: Verify artifacts exist and are non-empty
+        run: |
+          set -e
+          for f in build/teardown_vr.dll build/injector.exe; do
+            if [ ! -f "$f" ]; then
+              echo "::error::missing build artifact: $f"
+              exit 1
+            fi
+            size=$(stat -c%s "$f")
+            if [ "$size" -lt 1024 ]; then
+              echo "::error::$f is only $size bytes, expected a real binary"
+              exit 1
+            fi
+            echo "$f: $size bytes"
+          done
+
+      - name: Verify artifacts are 64-bit PE
+        run: |
+          set -e
+          for f in build/teardown_vr.dll build/injector.exe; do
+            desc=$(file -b "$f")
+            echo "$f: $desc"
+            case "$desc" in
+              *PE32+*x86-64*) echo "  ok: 64-bit PE" ;;
+              *) echo "::error::$f is not a 64-bit PE: $desc"; exit 1 ;;
+            esac
+          done
+
+      # The mod is an offline renderer hook. It has no reason to touch the
+      # network, and a stray import is the cheapest possible supply-chain
+      # regression, so fail the build on one. Keep this list to DLLs that
+      # would mean real network capability.
+      - name: Verify no network imports
+        run: |
+          set -e
+          banned='ws2_32|wsock32|winhttp|wininet|urlmon|secur32|schannel'
+          for f in build/teardown_vr.dll build/injector.exe; do
+            dlls=$(x86_64-w64-mingw32-objdump -p "$f" \
+                   | sed -n 's/.*DLL Name: //p' | sort -u)
+            echo "== $f imports: $dlls"
+            if echo "$dlls" | grep -iE "$banned"; then
+              echo "::error::$f imports a network DLL"
+              exit 1
+            fi
+          done
+          echo "no network imports"
+
+      - name: Run offline unit tests
+        run: sh tests/run_tests.sh
+
+      # The Lua layer has its own suite: it syntax-checks every file, rebuilds
+      # the merged single-file variant, and runs it twice -- once modular, once
+      # with dofile() hard-disabled, because the merged build is the fallback
+      # path for when the game refuses to load a multi-file mod.
+      - name: Install Lua 5.1
+        run: sudo apt-get install -y lua5.1
+
+      - name: Run Lua suite
+        working-directory: lua
+        run: sh run_tests.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: teardown-vr-mingw
+          path: |
+            build/teardown_vr.dll
+            build/injector.exe
+          if-no-files-found: error

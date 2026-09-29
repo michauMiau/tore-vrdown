@@ -1,0 +1,2 @@
+This is a merged build. main.lua's dofile probe is bypassed
+because all four modules are already inlined above.

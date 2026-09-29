@@ -1,0 +1,386 @@
+[
+ {
+  "slot": 0,
+  "byte_off": 0,
+  "vtable_rva": 19985336,
+  "fn_rva": 7486672,
+  "method": "Init",
+  "kind": "thunk"
+ },
+ {
+  "slot": 1,
+  "byte_off": 8,
+  "vtable_rva": 19985344,
+  "fn_rva": 7473296,
+  "method": "Shutdown",
+  "kind": "thunk"
+ },
+ {
+  "slot": 2,
+  "byte_off": 16,
+  "vtable_rva": 19985352,
+  "fn_rva": 7486752,
+  "method": "SetInputActionManifestFilePath",
+  "kind": "body14"
+ },
+ {
+  "slot": 3,
+  "byte_off": 24,
+  "vtable_rva": 19985360,
+  "fn_rva": 7458336,
+  "method": "RunFrame",
+  "kind": "thunk"
+ },
+ {
+  "slot": 4,
+  "byte_off": 32,
+  "vtable_rva": 19985368,
+  "fn_rva": 7484464,
+  "method": "BWaitForData",
+  "kind": "thunk"
+ },
+ {
+  "slot": 5,
+  "byte_off": 40,
+  "vtable_rva": 19985376,
+  "fn_rva": 7478416,
+  "method": "BNewDataAvailable",
+  "kind": "thunk"
+ },
+ {
+  "slot": 6,
+  "byte_off": 48,
+  "vtable_rva": 19985384,
+  "fn_rva": 7472288,
+  "method": "GetConnectedControllers",
+  "kind": "thunk"
+ },
+ {
+  "slot": 7,
+  "byte_off": 56,
+  "vtable_rva": 19985392,
+  "fn_rva": 7485504,
+  "method": "EnableDeviceCallbacks",
+  "kind": "thunk"
+ },
+ {
+  "slot": 8,
+  "byte_off": 64,
+  "vtable_rva": 19985400,
+  "fn_rva": 7476144,
+  "method": "EnableActionEventCallbacks",
+  "kind": "thunk"
+ },
+ {
+  "slot": 9,
+  "byte_off": 72,
+  "vtable_rva": 19985408,
+  "fn_rva": 7471728,
+  "method": "GetActionSetHandle",
+  "kind": "body14"
+ },
+ {
+  "slot": 10,
+  "byte_off": 80,
+  "vtable_rva": 19985416,
+  "fn_rva": 7470480,
+  "method": "ActivateActionSet",
+  "kind": "thunk"
+ },
+ {
+  "slot": 11,
+  "byte_off": 88,
+  "vtable_rva": 19985424,
+  "fn_rva": 7472400,
+  "method": "GetCurrentActionSet",
+  "kind": "thunk"
+ },
+ {
+  "slot": 12,
+  "byte_off": 96,
+  "vtable_rva": 19985432,
+  "fn_rva": 7470544,
+  "method": "ActivateActionSetLayer",
+  "kind": "thunk"
+ },
+ {
+  "slot": 13,
+  "byte_off": 104,
+  "vtable_rva": 19985440,
+  "fn_rva": 7471600,
+  "method": "DeactivateActionSetLayer",
+  "kind": "thunk"
+ },
+ {
+  "slot": 14,
+  "byte_off": 112,
+  "vtable_rva": 19985448,
+  "fn_rva": 7471664,
+  "method": "DeactivateAllActionSetLayers",
+  "kind": "thunk"
+ },
+ {
+  "slot": 15,
+  "byte_off": 120,
+  "vtable_rva": 19985456,
+  "fn_rva": 7471856,
+  "method": "GetActiveActionSetLayers",
+  "kind": "thunk"
+ },
+ {
+  "slot": 16,
+  "byte_off": 128,
+  "vtable_rva": 19985464,
+  "fn_rva": 7485824,
+  "method": "GetDigitalActionHandle",
+  "kind": "body14"
+ },
+ {
+  "slot": 17,
+  "byte_off": 136,
+  "vtable_rva": 19985472,
+  "fn_rva": 7472416,
+  "method": "GetDigitalActionData",
+  "kind": "body14"
+ },
+ {
+  "slot": 18,
+  "byte_off": 144,
+  "vtable_rva": 19985480,
+  "fn_rva": 7485952,
+  "method": "GetDigitalActionOrigins",
+  "kind": "body14"
+ },
+ {
+  "slot": 19,
+  "byte_off": 152,
+  "vtable_rva": 19985488,
+  "fn_rva": 7486544,
+  "method": "GetStringForDigitalActionName",
+  "kind": "body14"
+ },
+ {
+  "slot": 20,
+  "byte_off": 160,
+  "vtable_rva": 19985496,
+  "fn_rva": 7485616,
+  "method": "GetAnalogActionHandle",
+  "kind": "body14"
+ },
+ {
+  "slot": 21,
+  "byte_off": 168,
+  "vtable_rva": 19985504,
+  "fn_rva": 7471920,
+  "method": "GetAnalogActionData",
+  "kind": "body14"
+ },
+ {
+  "slot": 22,
+  "byte_off": 176,
+  "vtable_rva": 19985512,
+  "fn_rva": 7485744,
+  "method": "GetAnalogActionOrigins",
+  "kind": "body14"
+ },
+ {
+  "slot": 23,
+  "byte_off": 184,
+  "vtable_rva": 19985520,
+  "fn_rva": 7486096,
+  "method": "GetGlyphPNGForActionOrigin",
+  "kind": "body14"
+ },
+ {
+  "slot": 24,
+  "byte_off": 192,
+  "vtable_rva": 19985528,
+  "fn_rva": 7486160,
+  "method": "GetGlyphSVGForActionOrigin",
+  "kind": "body14"
+ },
+ {
+  "slot": 25,
+  "byte_off": 200,
+  "vtable_rva": 19985536,
+  "fn_rva": 7486032,
+  "method": "GetGlyphForActionOrigin_Legacy",
+  "kind": "thunk"
+ },
+ {
+  "slot": 26,
+  "byte_off": 208,
+  "vtable_rva": 19985544,
+  "fn_rva": 7486368,
+  "method": "GetStringForActionOrigin",
+  "kind": "thunk"
+ },
+ {
+  "slot": 27,
+  "byte_off": 216,
+  "vtable_rva": 19985552,
+  "fn_rva": 7486432,
+  "method": "GetStringForAnalogActionName",
+  "kind": "body14"
+ },
+ {
+  "slot": 28,
+  "byte_off": 224,
+  "vtable_rva": 19985560,
+  "fn_rva": 7473312,
+  "method": "StopAnalogActionMomentum",
+  "kind": "thunk"
+ },
+ {
+  "slot": 29,
+  "byte_off": 232,
+  "vtable_rva": 19985568,
+  "fn_rva": 7472880,
+  "method": "GetMotionData",
+  "kind": "body14"
+ },
+ {
+  "slot": 30,
+  "byte_off": 240,
+  "vtable_rva": 19985576,
+  "fn_rva": 7473408,
+  "method": "TriggerVibration",
+  "kind": "thunk"
+ },
+ {
+  "slot": 31,
+  "byte_off": 248,
+  "vtable_rva": 19985584,
+  "fn_rva": 7487264,
+  "method": "TriggerVibrationExtended",
+  "kind": "body14"
+ },
+ {
+  "slot": 32,
+  "byte_off": 256,
+  "vtable_rva": 19985592,
+  "fn_rva": 7487216,
+  "method": "TriggerSimpleHapticEvent",
+  "kind": "thunk"
+ },
+ {
+  "slot": 33,
+  "byte_off": 264,
+  "vtable_rva": 19985600,
+  "fn_rva": 7473152,
+  "method": "SetLEDColor",
+  "kind": "body14"
+ },
+ {
+  "slot": 34,
+  "byte_off": 272,
+  "vtable_rva": 19985608,
+  "fn_rva": 7473344,
+  "method": "Legacy_TriggerHapticPulse",
+  "kind": "thunk"
+ },
+ {
+  "slot": 35,
+  "byte_off": 280,
+  "vtable_rva": 19985616,
+  "fn_rva": 7473360,
+  "method": "Legacy_TriggerRepeatedHapticPulse",
+  "kind": "thunk"
+ },
+ {
+  "slot": 36,
+  "byte_off": 288,
+  "vtable_rva": 19985624,
+  "fn_rva": 7473248,
+  "method": "ShowBindingPanel",
+  "kind": "thunk"
+ },
+ {
+  "slot": 37,
+  "byte_off": 296,
+  "vtable_rva": 19985632,
+  "fn_rva": 7486240,
+  "method": "GetInputTypeForHandle",
+  "kind": "thunk"
+ },
+ {
+  "slot": 38,
+  "byte_off": 304,
+  "vtable_rva": 19985640,
+  "fn_rva": 6807616,
+  "method": "GetControllerForGamepadIndex",
+  "kind": "thunk"
+ },
+ {
+  "slot": 39,
+  "byte_off": 312,
+  "vtable_rva": 19985648,
+  "fn_rva": 6808976,
+  "method": "GetGamepadIndexForController",
+  "kind": "thunk"
+ },
+ {
+  "slot": 40,
+  "byte_off": 320,
+  "vtable_rva": 19985656,
+  "fn_rva": 7473056,
+  "method": "GetStringForXboxOrigin",
+  "kind": "thunk"
+ },
+ {
+  "slot": 41,
+  "byte_off": 328,
+  "vtable_rva": 19985664,
+  "fn_rva": 7472800,
+  "method": "GetGlyphForXboxOrigin",
+  "kind": "thunk"
+ },
+ {
+  "slot": 42,
+  "byte_off": 336,
+  "vtable_rva": 19985672,
+  "fn_rva": 7485552,
+  "method": "GetActionOriginFromXboxOrigin",
+  "kind": "thunk"
+ },
+ {
+  "slot": 43,
+  "byte_off": 344,
+  "vtable_rva": 19985680,
+  "fn_rva": 7487136,
+  "method": "TranslateActionOrigin",
+  "kind": "body14"
+ },
+ {
+  "slot": 44,
+  "byte_off": 352,
+  "vtable_rva": 19985688,
+  "fn_rva": 7472336,
+  "method": "GetDeviceBindingRevision",
+  "kind": "thunk"
+ },
+ {
+  "slot": 45,
+  "byte_off": 360,
+  "vtable_rva": 19985696,
+  "fn_rva": 7481120,
+  "method": "GetRemotePlaySessionID",
+  "kind": "thunk"
+ },
+ {
+  "slot": 46,
+  "byte_off": 368,
+  "vtable_rva": 19985704,
+  "fn_rva": 7486304,
+  "method": "GetSessionInputConfigurationSettings",
+  "kind": "thunk"
+ },
+ {
+  "slot": 47,
+  "byte_off": 376,
+  "vtable_rva": 19985712,
+  "fn_rva": 7486736,
+  "method": "SetDualSenseTriggerEffect",
+  "kind": "thunk"
+ }
+]

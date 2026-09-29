@@ -67,3 +67,36 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# --- Teardown VR mod additions -------------------------------------------
+# Live test harness: dumps, live logs and process-monitor output from the
+# Windows test box. Large, machine-specific, regenerated on every run.
+logs/
+
+# Python bytecode from the analysis tools in tools/ and lua/
+__pycache__/
+*.pyc
+
+# ReShade / SteamVR runtime config that lands next to the build
+*.ini.bak
+reshade_dxgi_wrapper.json
+steamvr.vrsettings
+
+# Editor and OS noise
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+
+# Editor droppings
+*~
+.DS_Store
+
+# Session scratch scripts.
+#
+# Reverse engineering produced ~340 one-off PowerShell probes in the project
+# root (xb64.ps1, audit3.ps1, beat.ps1, ...). They are single-run diagnostics
+# against one machine, they reference each other by cryptic name, and nothing
+# in docs/ points at them. The 34 that the write-ups actually cite are kept
+# under tools/ps/. Re-enable locally with:  git add -f <file>.ps1
+/*.ps1

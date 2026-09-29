@@ -1,0 +1,778 @@
+{
+ "interface": "ISteamInput",
+ "version": "SteamInput006",
+ "dll": "steam_api64.dll",
+ "dll_sha256": "1db3fd414039d3e5815a5721925dd2e0a3a9f2549603c6cab7c49b84966a1af3",
+ "dll_size": 298384,
+ "vtable_rva_steamclient64": 19985336,
+ "vtable_va_steamclient64": 5254476728,
+ "n_slots": 48,
+ "slots": [
+  {
+   "slot": 0,
+   "byte_off": 0,
+   "method": "Init",
+   "ret": "bool",
+   "sig": "bool Init( bool bExplicitlyCallRunFrame )",
+   "vtable_rva": 19985336,
+   "real_fn_rva": 7486672,
+   "api_thunk_rva": 6192,
+   "api_export": "SteamAPI_ISteamInput_Init",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 0
+  },
+  {
+   "slot": 1,
+   "byte_off": 8,
+   "method": "Shutdown",
+   "ret": "bool",
+   "sig": "bool Shutdown()",
+   "vtable_rva": 19985344,
+   "real_fn_rva": 7473296,
+   "api_thunk_rva": 6176,
+   "api_export": "SteamAPI_ISteamInput_Shutdown",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 8
+  },
+  {
+   "slot": 2,
+   "byte_off": 16,
+   "method": "SetInputActionManifestFilePath",
+   "ret": "bool",
+   "sig": "bool SetInputActionManifestFilePath( const char *pchInputActionManifestAbsolutePath )",
+   "vtable_rva": 19985352,
+   "real_fn_rva": 7486752,
+   "api_thunk_rva": 6160,
+   "api_export": "SteamAPI_ISteamInput_SetInputActionManifestFilePath",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 16
+  },
+  {
+   "slot": 3,
+   "byte_off": 24,
+   "method": "RunFrame",
+   "ret": "void",
+   "sig": "void RunFrame( bool bReservedValue = true )",
+   "vtable_rva": 19985360,
+   "real_fn_rva": 7458336,
+   "api_thunk_rva": 6144,
+   "api_export": "SteamAPI_ISteamInput_RunFrame",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 24
+  },
+  {
+   "slot": 4,
+   "byte_off": 32,
+   "method": "BWaitForData",
+   "ret": "bool",
+   "sig": "bool BWaitForData( bool bWaitForever, uint32 unTimeout )",
+   "vtable_rva": 19985368,
+   "real_fn_rva": 7484464,
+   "api_thunk_rva": 6128,
+   "api_export": "SteamAPI_ISteamInput_BWaitForData",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 32
+  },
+  {
+   "slot": 5,
+   "byte_off": 40,
+   "method": "BNewDataAvailable",
+   "ret": "bool",
+   "sig": "bool BNewDataAvailable()",
+   "vtable_rva": 19985376,
+   "real_fn_rva": 7478416,
+   "api_thunk_rva": 6384,
+   "api_export": "SteamAPI_ISteamInput_BNewDataAvailable",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 40
+  },
+  {
+   "slot": 6,
+   "byte_off": 48,
+   "method": "GetConnectedControllers",
+   "ret": "int",
+   "sig": "int GetConnectedControllers( STEAM_OUT_ARRAY_COUNT( STEAM_INPUT_MAX_COUNT, Receives list of connected controllers ) InputHandle_t *handlesOut )",
+   "vtable_rva": 19985384,
+   "real_fn_rva": 7472288,
+   "api_thunk_rva": 6256,
+   "api_export": "SteamAPI_ISteamInput_GetConnectedControllers",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 48
+  },
+  {
+   "slot": 7,
+   "byte_off": 56,
+   "method": "EnableDeviceCallbacks",
+   "ret": "void",
+   "sig": "void EnableDeviceCallbacks()",
+   "vtable_rva": 19985392,
+   "real_fn_rva": 7485504,
+   "api_thunk_rva": 6240,
+   "api_export": "SteamAPI_ISteamInput_EnableDeviceCallbacks",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 56
+  },
+  {
+   "slot": 8,
+   "byte_off": 64,
+   "method": "EnableActionEventCallbacks",
+   "ret": "void",
+   "sig": "void EnableActionEventCallbacks( SteamInputActionEventCallbackPointer pCallback )",
+   "vtable_rva": 19985400,
+   "real_fn_rva": 7476144,
+   "api_thunk_rva": 6448,
+   "api_export": "SteamAPI_ISteamInput_EnableActionEventCallbacks",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 64
+  },
+  {
+   "slot": 9,
+   "byte_off": 72,
+   "method": "GetActionSetHandle",
+   "ret": "InputActionSetHandle_t",
+   "sig": "InputActionSetHandle_t GetActionSetHandle( const char *pszActionSetName )",
+   "vtable_rva": 19985408,
+   "real_fn_rva": 7471728,
+   "api_thunk_rva": 6288,
+   "api_export": "SteamAPI_ISteamInput_GetActionSetHandle",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 72
+  },
+  {
+   "slot": 10,
+   "byte_off": 80,
+   "method": "ActivateActionSet",
+   "ret": "void",
+   "sig": "void ActivateActionSet( InputHandle_t inputHandle, InputActionSetHandle_t actionSetHandle )",
+   "vtable_rva": 19985416,
+   "real_fn_rva": 7470480,
+   "api_thunk_rva": 6416,
+   "api_export": "SteamAPI_ISteamInput_ActivateActionSet",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 80
+  },
+  {
+   "slot": 11,
+   "byte_off": 88,
+   "method": "GetCurrentActionSet",
+   "ret": "InputActionSetHandle_t",
+   "sig": "InputActionSetHandle_t GetCurrentActionSet( InputHandle_t inputHandle )",
+   "vtable_rva": 19985424,
+   "real_fn_rva": 7472400,
+   "api_thunk_rva": 6672,
+   "api_export": "SteamAPI_ISteamInput_GetCurrentActionSet",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 88
+  },
+  {
+   "slot": 12,
+   "byte_off": 96,
+   "method": "ActivateActionSetLayer",
+   "ret": "void",
+   "sig": "void ActivateActionSetLayer( InputHandle_t inputHandle, InputActionSetHandle_t actionSetLayerHandle )",
+   "vtable_rva": 19985432,
+   "real_fn_rva": 7470544,
+   "api_thunk_rva": 6528,
+   "api_export": "SteamAPI_ISteamInput_ActivateActionSetLayer",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 96
+  },
+  {
+   "slot": 13,
+   "byte_off": 104,
+   "method": "DeactivateActionSetLayer",
+   "ret": "void",
+   "sig": "void DeactivateActionSetLayer( InputHandle_t inputHandle, InputActionSetHandle_t actionSetLayerHandle )",
+   "vtable_rva": 19985440,
+   "real_fn_rva": 7471600,
+   "api_thunk_rva": 6608,
+   "api_export": "SteamAPI_ISteamInput_DeactivateActionSetLayer",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 104
+  },
+  {
+   "slot": 14,
+   "byte_off": 112,
+   "method": "DeactivateAllActionSetLayers",
+   "ret": "void",
+   "sig": "void DeactivateAllActionSetLayers( InputHandle_t inputHandle )",
+   "vtable_rva": 19985448,
+   "real_fn_rva": 7471664,
+   "api_thunk_rva": 6576,
+   "api_export": "SteamAPI_ISteamInput_DeactivateAllActionSetLayers",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 112
+  },
+  {
+   "slot": 15,
+   "byte_off": 120,
+   "method": "GetActiveActionSetLayers",
+   "ret": "int",
+   "sig": "int GetActiveActionSetLayers( InputHandle_t inputHandle, STEAM_OUT_ARRAY_COUNT( STEAM_INPUT_MAX_ACTIVE_LAYERS, Receives list of active layers ) InputActionSetHandle_t *handlesOut )",
+   "vtable_rva": 19985456,
+   "real_fn_rva": 7471856,
+   "api_thunk_rva": 6400,
+   "api_export": "SteamAPI_ISteamInput_GetActiveActionSetLayers",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 120
+  },
+  {
+   "slot": 16,
+   "byte_off": 128,
+   "method": "GetDigitalActionHandle",
+   "ret": "InputDigitalActionHandle_t",
+   "sig": "InputDigitalActionHandle_t GetDigitalActionHandle( const char *pszActionName )",
+   "vtable_rva": 19985464,
+   "real_fn_rva": 7485824,
+   "api_thunk_rva": 6544,
+   "api_export": "SteamAPI_ISteamInput_GetDigitalActionHandle",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 128
+  },
+  {
+   "slot": 17,
+   "byte_off": 136,
+   "method": "GetDigitalActionData",
+   "ret": "InputDigitalActionData_t",
+   "sig": "InputDigitalActionData_t GetDigitalActionData( InputHandle_t inputHandle, InputDigitalActionHandle_t digitalActionHandle )",
+   "vtable_rva": 19985472,
+   "real_fn_rva": 7472416,
+   "api_thunk_rva": 8320,
+   "api_export": "SteamAPI_ISteamInput_GetDigitalActionData",
+   "thunk_form": "call",
+   "api_thunk_disp": 136
+  },
+  {
+   "slot": 18,
+   "byte_off": 144,
+   "method": "GetDigitalActionOrigins",
+   "ret": "int",
+   "sig": "int GetDigitalActionOrigins( InputHandle_t inputHandle, InputActionSetHandle_t actionSetHandle, InputDigitalActionHandle_t digitalActionHandle, STEAM_OUT_ARRAY_COUNT( STEAM_INPUT_MAX_ORIGINS, Receives list of action origins ) EInputActionOrigin *originsOut )",
+   "vtable_rva": 19985480,
+   "real_fn_rva": 7485952,
+   "api_thunk_rva": 8352,
+   "api_export": "SteamAPI_ISteamInput_GetDigitalActionOrigins",
+   "thunk_form": "materialised",
+   "api_thunk_disp": 144
+  },
+  {
+   "slot": 19,
+   "byte_off": 152,
+   "method": "GetStringForDigitalActionName",
+   "ret": "const char *",
+   "sig": "const char *GetStringForDigitalActionName( InputDigitalActionHandle_t eActionHandle )",
+   "vtable_rva": 19985488,
+   "real_fn_rva": 7486544,
+   "api_thunk_rva": 6224,
+   "api_export": "SteamAPI_ISteamInput_GetStringForDigitalActionName",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 152
+  },
+  {
+   "slot": 20,
+   "byte_off": 160,
+   "method": "GetAnalogActionHandle",
+   "ret": "InputAnalogActionHandle_t",
+   "sig": "InputAnalogActionHandle_t GetAnalogActionHandle( const char *pszActionName )",
+   "vtable_rva": 19985496,
+   "real_fn_rva": 7485616,
+   "api_thunk_rva": 7264,
+   "api_export": "SteamAPI_ISteamInput_GetAnalogActionHandle",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 160
+  },
+  {
+   "slot": 21,
+   "byte_off": 168,
+   "method": "GetAnalogActionData",
+   "ret": "InputAnalogActionData_t",
+   "sig": "InputAnalogActionData_t GetAnalogActionData( InputHandle_t inputHandle, InputAnalogActionHandle_t analogActionHandle )",
+   "vtable_rva": 19985504,
+   "real_fn_rva": 7471920,
+   "api_thunk_rva": 8256,
+   "api_export": "SteamAPI_ISteamInput_GetAnalogActionData",
+   "thunk_form": "call",
+   "api_thunk_disp": 168
+  },
+  {
+   "slot": 22,
+   "byte_off": 176,
+   "method": "GetAnalogActionOrigins",
+   "ret": "int",
+   "sig": "int GetAnalogActionOrigins( InputHandle_t inputHandle, InputActionSetHandle_t actionSetHandle, InputAnalogActionHandle_t analogActionHandle, STEAM_OUT_ARRAY_COUNT( STEAM_INPUT_MAX_ORIGINS, Receives list of action origins ) EInputActionOrigin *originsOut )",
+   "vtable_rva": 19985512,
+   "real_fn_rva": 7485744,
+   "api_thunk_rva": 7184,
+   "api_export": "SteamAPI_ISteamInput_GetAnalogActionOrigins",
+   "thunk_form": "materialised",
+   "api_thunk_disp": 176
+  },
+  {
+   "slot": 23,
+   "byte_off": 184,
+   "method": "GetGlyphPNGForActionOrigin",
+   "ret": "const char *",
+   "sig": "const char *GetGlyphPNGForActionOrigin( EInputActionOrigin eOrigin, ESteamInputGlyphSize eSize, uint32 unFlags )",
+   "vtable_rva": 19985520,
+   "real_fn_rva": 7486096,
+   "api_thunk_rva": 6320,
+   "api_export": "SteamAPI_ISteamInput_GetGlyphPNGForActionOrigin",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 184
+  },
+  {
+   "slot": 24,
+   "byte_off": 192,
+   "method": "GetGlyphSVGForActionOrigin",
+   "ret": "const char *",
+   "sig": "const char *GetGlyphSVGForActionOrigin( EInputActionOrigin eOrigin, uint32 unFlags )",
+   "vtable_rva": 19985528,
+   "real_fn_rva": 7486160,
+   "api_thunk_rva": 6560,
+   "api_export": "SteamAPI_ISteamInput_GetGlyphSVGForActionOrigin",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 192
+  },
+  {
+   "slot": 25,
+   "byte_off": 200,
+   "method": "GetGlyphForActionOrigin_Legacy",
+   "ret": "const char *",
+   "sig": "const char *GetGlyphForActionOrigin_Legacy( EInputActionOrigin eOrigin )",
+   "vtable_rva": 19985536,
+   "real_fn_rva": 7486032,
+   "api_thunk_rva": 6464,
+   "api_export": "SteamAPI_ISteamInput_GetGlyphForActionOrigin_Legacy",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 200
+  },
+  {
+   "slot": 26,
+   "byte_off": 208,
+   "method": "GetStringForActionOrigin",
+   "ret": "const char *",
+   "sig": "const char *GetStringForActionOrigin( EInputActionOrigin eOrigin )",
+   "vtable_rva": 19985544,
+   "real_fn_rva": 7486368,
+   "api_thunk_rva": 6496,
+   "api_export": "SteamAPI_ISteamInput_GetStringForActionOrigin",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 208
+  },
+  {
+   "slot": 27,
+   "byte_off": 216,
+   "method": "GetStringForAnalogActionName",
+   "ret": "const char *",
+   "sig": "const char *GetStringForAnalogActionName( InputAnalogActionHandle_t eActionHandle )",
+   "vtable_rva": 19985552,
+   "real_fn_rva": 7486432,
+   "api_thunk_rva": 6272,
+   "api_export": "SteamAPI_ISteamInput_GetStringForAnalogActionName",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 216
+  },
+  {
+   "slot": 28,
+   "byte_off": 224,
+   "method": "StopAnalogActionMomentum",
+   "ret": "void",
+   "sig": "void StopAnalogActionMomentum( InputHandle_t inputHandle, InputAnalogActionHandle_t eAction )",
+   "vtable_rva": 19985560,
+   "real_fn_rva": 7473312,
+   "api_thunk_rva": 6304,
+   "api_export": "SteamAPI_ISteamInput_StopAnalogActionMomentum",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 224
+  },
+  {
+   "slot": 29,
+   "byte_off": 232,
+   "method": "GetMotionData",
+   "ret": "InputMotionData_t",
+   "sig": "InputMotionData_t GetMotionData( InputHandle_t inputHandle )",
+   "vtable_rva": 19985568,
+   "real_fn_rva": 7472880,
+   "api_thunk_rva": 8368,
+   "api_export": "SteamAPI_ISteamInput_GetMotionData",
+   "thunk_form": "call",
+   "api_thunk_disp": 232
+  },
+  {
+   "slot": 30,
+   "byte_off": 240,
+   "method": "TriggerVibration",
+   "ret": "void",
+   "sig": "void TriggerVibration( InputHandle_t inputHandle, unsigned short usLeftSpeed, unsigned short usRightSpeed )",
+   "vtable_rva": 19985576,
+   "real_fn_rva": 7473408,
+   "api_thunk_rva": 6688,
+   "api_export": "SteamAPI_ISteamInput_TriggerVibration",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 240
+  },
+  {
+   "slot": 31,
+   "byte_off": 248,
+   "method": "TriggerVibrationExtended",
+   "ret": "void",
+   "sig": "void TriggerVibrationExtended( InputHandle_t inputHandle, unsigned short usLeftSpeed, unsigned short usRightSpeed, unsigned short usLeftTriggerSpeed, unsigned short usRightTriggerSpeed )",
+   "vtable_rva": 19985584,
+   "real_fn_rva": 7487264,
+   "api_thunk_rva": 8544,
+   "api_export": "SteamAPI_ISteamInput_TriggerVibrationExtended",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 248
+  },
+  {
+   "slot": 32,
+   "byte_off": 256,
+   "method": "TriggerSimpleHapticEvent",
+   "ret": "void",
+   "sig": "void TriggerSimpleHapticEvent( InputHandle_t inputHandle, EControllerHapticLocation eHapticLocation, uint8 nIntensity, char nGainDB, uint8 nOtherIntensity, char nOtherGainDB )",
+   "vtable_rva": 19985592,
+   "real_fn_rva": 7487216,
+   "api_thunk_rva": 8496,
+   "api_export": "SteamAPI_ISteamInput_TriggerSimpleHapticEvent",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 256
+  },
+  {
+   "slot": 33,
+   "byte_off": 264,
+   "method": "SetLEDColor",
+   "ret": "void",
+   "sig": "void SetLEDColor( InputHandle_t inputHandle, uint8 nColorR, uint8 nColorG, uint8 nColorB, unsigned int nFlags )",
+   "vtable_rva": 19985600,
+   "real_fn_rva": 7473152,
+   "api_thunk_rva": 8464,
+   "api_export": "SteamAPI_ISteamInput_SetLEDColor",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 264
+  },
+  {
+   "slot": 34,
+   "byte_off": 272,
+   "method": "Legacy_TriggerHapticPulse",
+   "ret": "void",
+   "sig": "void Legacy_TriggerHapticPulse( InputHandle_t inputHandle, ESteamControllerPad eTargetPad, unsigned short usDurationMicroSec )",
+   "vtable_rva": 19985608,
+   "real_fn_rva": 7473344,
+   "api_thunk_rva": 7616,
+   "api_export": "SteamAPI_ISteamInput_Legacy_TriggerHapticPulse",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 272
+  },
+  {
+   "slot": 35,
+   "byte_off": 280,
+   "method": "Legacy_TriggerRepeatedHapticPulse",
+   "ret": "void",
+   "sig": "void Legacy_TriggerRepeatedHapticPulse( InputHandle_t inputHandle, ESteamControllerPad eTargetPad, unsigned short usDurationMicroSec, unsigned short usOffMicroSec, unsigned short unRepeat, unsigned int nFlags )",
+   "vtable_rva": 19985616,
+   "real_fn_rva": 7473360,
+   "api_thunk_rva": 8432,
+   "api_export": "SteamAPI_ISteamInput_Legacy_TriggerRepeatedHapticPulse",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 280
+  },
+  {
+   "slot": 36,
+   "byte_off": 288,
+   "method": "ShowBindingPanel",
+   "ret": "bool",
+   "sig": "bool ShowBindingPanel( InputHandle_t inputHandle )",
+   "vtable_rva": 19985624,
+   "real_fn_rva": 7473248,
+   "api_thunk_rva": 6752,
+   "api_export": "SteamAPI_ISteamInput_ShowBindingPanel",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 288
+  },
+  {
+   "slot": 37,
+   "byte_off": 296,
+   "method": "GetInputTypeForHandle",
+   "ret": "ESteamInputType",
+   "sig": "ESteamInputType GetInputTypeForHandle( InputHandle_t inputHandle )",
+   "vtable_rva": 19985632,
+   "real_fn_rva": 7486240,
+   "api_thunk_rva": 6704,
+   "api_export": "SteamAPI_ISteamInput_GetInputTypeForHandle",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 296
+  },
+  {
+   "slot": 38,
+   "byte_off": 304,
+   "method": "GetControllerForGamepadIndex",
+   "ret": "InputHandle_t",
+   "sig": "InputHandle_t GetControllerForGamepadIndex( int nIndex )",
+   "vtable_rva": 19985640,
+   "real_fn_rva": 6807616,
+   "api_thunk_rva": 6640,
+   "api_export": "SteamAPI_ISteamInput_GetControllerForGamepadIndex",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 304
+  },
+  {
+   "slot": 39,
+   "byte_off": 312,
+   "method": "GetGamepadIndexForController",
+   "ret": "int",
+   "sig": "int GetGamepadIndexForController( InputHandle_t ulinputHandle )",
+   "vtable_rva": 19985648,
+   "real_fn_rva": 6808976,
+   "api_thunk_rva": 6720,
+   "api_export": "SteamAPI_ISteamInput_GetGamepadIndexForController",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 312
+  },
+  {
+   "slot": 40,
+   "byte_off": 320,
+   "method": "GetStringForXboxOrigin",
+   "ret": "const char *",
+   "sig": "const char *GetStringForXboxOrigin( EXboxOrigin eOrigin )",
+   "vtable_rva": 19985656,
+   "real_fn_rva": 7473056,
+   "api_thunk_rva": 6736,
+   "api_export": "SteamAPI_ISteamInput_GetStringForXboxOrigin",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 320
+  },
+  {
+   "slot": 41,
+   "byte_off": 328,
+   "method": "GetGlyphForXboxOrigin",
+   "ret": "const char *",
+   "sig": "const char *GetGlyphForXboxOrigin( EXboxOrigin eOrigin )",
+   "vtable_rva": 19985664,
+   "real_fn_rva": 7472800,
+   "api_thunk_rva": 7904,
+   "api_export": "SteamAPI_ISteamInput_GetGlyphForXboxOrigin",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 328
+  },
+  {
+   "slot": 42,
+   "byte_off": 336,
+   "method": "GetActionOriginFromXboxOrigin",
+   "ret": "EInputActionOrigin",
+   "sig": "EInputActionOrigin GetActionOriginFromXboxOrigin( InputHandle_t inputHandle, EXboxOrigin eOrigin )",
+   "vtable_rva": 19985672,
+   "real_fn_rva": 7485552,
+   "api_thunk_rva": 7632,
+   "api_export": "SteamAPI_ISteamInput_GetActionOriginFromXboxOrigin",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 336
+  },
+  {
+   "slot": 43,
+   "byte_off": 344,
+   "method": "TranslateActionOrigin",
+   "ret": "EInputActionOrigin",
+   "sig": "EInputActionOrigin TranslateActionOrigin( ESteamInputType eDestinationInputType, EInputActionOrigin eSourceOrigin )",
+   "vtable_rva": 19985680,
+   "real_fn_rva": 7487136,
+   "api_thunk_rva": 7888,
+   "api_export": "SteamAPI_ISteamInput_TranslateActionOrigin",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 344
+  },
+  {
+   "slot": 44,
+   "byte_off": 352,
+   "method": "GetDeviceBindingRevision",
+   "ret": "bool",
+   "sig": "bool GetDeviceBindingRevision( InputHandle_t inputHandle, int *pMajor, int *pMinor )",
+   "vtable_rva": 19985688,
+   "real_fn_rva": 7472336,
+   "api_thunk_rva": 7104,
+   "api_export": "SteamAPI_ISteamInput_GetDeviceBindingRevision",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 352
+  },
+  {
+   "slot": 45,
+   "byte_off": 360,
+   "method": "GetRemotePlaySessionID",
+   "ret": "uint32",
+   "sig": "uint32 GetRemotePlaySessionID( InputHandle_t inputHandle )",
+   "vtable_rva": 19985696,
+   "real_fn_rva": 7481120,
+   "api_thunk_rva": 7520,
+   "api_export": "SteamAPI_ISteamInput_GetRemotePlaySessionID",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 360
+  },
+  {
+   "slot": 46,
+   "byte_off": 368,
+   "method": "GetSessionInputConfigurationSettings",
+   "ret": "uint16",
+   "sig": "uint16 GetSessionInputConfigurationSettings()",
+   "vtable_rva": 19985704,
+   "real_fn_rva": 7486304,
+   "api_thunk_rva": 7552,
+   "api_export": "SteamAPI_ISteamInput_GetSessionInputConfigurationSettings",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 368
+  },
+  {
+   "slot": 47,
+   "byte_off": 376,
+   "method": "SetDualSenseTriggerEffect",
+   "ret": "void",
+   "sig": "void SetDualSenseTriggerEffect( InputHandle_t inputHandle, const ScePadTriggerEffectParam *pParam )",
+   "vtable_rva": 19985712,
+   "real_fn_rva": 7486736,
+   "api_thunk_rva": 7536,
+   "api_export": "SteamAPI_ISteamInput_SetDualSenseTriggerEffect",
+   "thunk_form": "jmp",
+   "api_thunk_disp": 376
+  }
+ ],
+ "enums": {
+  "EInputSourceMode": [
+   [
+    "k_EInputSourceMode_None",
+    0
+   ],
+   [
+    "k_EInputSourceMode_Dpad",
+    1
+   ],
+   [
+    "k_EInputSourceMode_Buttons",
+    2
+   ],
+   [
+    "k_EInputSourceMode_FourButtons",
+    3
+   ],
+   [
+    "k_EInputSourceMode_AbsoluteMouse",
+    4
+   ],
+   [
+    "k_EInputSourceMode_RelativeMouse",
+    5
+   ],
+   [
+    "k_EInputSourceMode_JoystickMove",
+    6
+   ],
+   [
+    "k_EInputSourceMode_JoystickMouse",
+    7
+   ],
+   [
+    "k_EInputSourceMode_JoystickCamera",
+    8
+   ],
+   [
+    "k_EInputSourceMode_ScrollWheel",
+    9
+   ],
+   [
+    "k_EInputSourceMode_Trigger",
+    10
+   ],
+   [
+    "k_EInputSourceMode_TouchMenu",
+    11
+   ],
+   [
+    "k_EInputSourceMode_MouseJoystick",
+    12
+   ],
+   [
+    "k_EInputSourceMode_MouseRegion",
+    13
+   ],
+   [
+    "k_EInputSourceMode_RadialMenu",
+    14
+   ],
+   [
+    "k_EInputSourceMode_SingleButton",
+    15
+   ],
+   [
+    "k_EInputSourceMode_Switches",
+    16
+   ]
+  ],
+  "ESteamInputType": [
+   [
+    "k_ESteamInputType_Unknown",
+    0
+   ],
+   [
+    "k_ESteamInputType_SteamController",
+    1
+   ],
+   [
+    "k_ESteamInputType_XBox360Controller",
+    2
+   ],
+   [
+    "k_ESteamInputType_XBoxOneController",
+    3
+   ],
+   [
+    "k_ESteamInputType_GenericGamepad",
+    4
+   ],
+   [
+    "k_ESteamInputType_PS4Controller",
+    5
+   ],
+   [
+    "k_ESteamInputType_AppleMFiController",
+    6
+   ],
+   [
+    "k_ESteamInputType_AndroidController",
+    7
+   ],
+   [
+    "k_ESteamInputType_SwitchJoyConPair",
+    8
+   ],
+   [
+    "k_ESteamInputType_SwitchJoyConSingle",
+    9
+   ],
+   [
+    "k_ESteamInputType_SwitchProController",
+    10
+   ],
+   [
+    "k_ESteamInputType_MobileTouch",
+    11
+   ],
+   [
+    "k_ESteamInputType_PS3Controller",
+    12
+   ],
+   [
+    "k_ESteamInputType_PS5Controller",
+    13
+   ],
+   [
+    "k_ESteamInputType_SteamDeckController",
+    14
+   ],
+   [
+    "k_ESteamInputType_Count",
+    15
+   ],
+   [
+    "k_ESteamInputType_MaximumPossibleValue",
+    255
+   ]
+  ]
+ }
+}
