@@ -551,7 +551,8 @@ static size_t measure_stealable(void* target, size_t max_len) {
 #include "present.h"
 #include "dxgi_probe.h"
 #include "census_dxgi.h"
-#include "frame_census.h"   /* after dxgi_probe.h: it reuses the header-verified
+#include "frame_census.h"
+#include "iat_census.h"   /* after dxgi_probe.h: it reuses the header-verified
                             * local IID copies defined there */
 #include "present_hook.h"
 
@@ -1661,6 +1662,27 @@ static LONG*    g_census_counters = NULL;
 static uint8_t** g_census_stubs    = NULL;
 static volatile LONG g_census_stop = 0;
 
+/* The IAT census had a scanner but no reporter, and because both
+ * census_reporter() and frame_reporter() are only created inside branches
+ * guarded by TDVR_SLOT_CENSUS, a build with the class census off created no
+ * reporting thread at all. The hooks were live, the log was silent, and that
+ * reads exactly like "the instrumentation did nothing" -- the same trap as the
+ * `if (n > 21)` reporter. Every instrument now gets a thread whether or not the
+ * others are compiled in.
+ *
+ * This sits deliberately OUTSIDE the TDVR_SLOT_CENSUS block: it was defined
+ * inside it first, and with the class census off the definition vanished while
+ * the CreateThread below still referenced it. */
+#if TDVR_IAT_CENSUS
+static DWORD WINAPI iat_reporter(LPVOID arg) {
+    (void)arg;
+    for (;;) {
+        Sleep(2000);
+        td_iat_report();
+    }
+}
+#endif
+
 #if TDVR_SLOT_CENSUS
 // A counting stub is 24 bytes of code and 40 bytes of slack. Each one is:
 //     48 B8 <counter>   mov rax, counter address
@@ -1669,6 +1691,8 @@ static volatile LONG g_census_stop = 0;
 //     FF E0             jmp rax
 // so the call is counted and then forwarded with the registers untouched apart
 // from RAX, which the ABI does not define across a call boundary anyway.
+#endif
+
 static DWORD WINAPI census_reporter(LPVOID arg) {
     (void)arg;
     static LONG seen[TDVR_CENSUS_SLOTS];
@@ -1722,10 +1746,12 @@ static DWORD WINAPI census_reporter(LPVOID arg) {
          * report covering every instrument. */
         td_frame_report();
 #endif
+#if TDVR_IAT_CENSUS
+        td_iat_report();
+#endif
     }
     return 0;
 }
-#endif
 
 static void hooked_end_render(void* self) {
     // Reachability counter. The install log says the vtable slots were patched,
@@ -2046,6 +2072,13 @@ static int install_hooks(void) {
          * class census ran -- they are independent questions. */
 #if TDVR_FRAME_CENSUS
         td_frame_install();
+#endif
+#if TDVR_IAT_CENSUS
+        /* The IAT census is the safe version of what the export detour was
+         * trying to do: same question, asked of the game's own import table
+         * instead of by rewriting shared system code. */
+        td_iat_scan();
+        CreateThread(NULL, 0, iat_reporter, NULL, 0, NULL);
 #endif
         // Each of the two vtable slots is patched independently, so which one is
         // responsible for the crash can be established by leaving one alone.
