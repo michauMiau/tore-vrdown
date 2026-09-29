@@ -457,7 +457,7 @@ static int td_resolve_by_rtti(td_hooks *h, char *why, size_t whysz) {
     }
 
     // --- 3. The vtable sits 8 bytes after the pointer to the COL ----------
-    // Layout:  [vtable-8] = &COL ,  vtable[0..] = function pointers
+    // Layout:  [vtable-8] = &COL , vtable[0..] = function pointers
     uint64_t col_va = (uint64_t)h->image + col_rva;
     for (const uint8_t *q = h->image; q + 16 < scan_end; q += 8) {
         if (*(const uint64_t *)q != col_va) continue;
@@ -467,6 +467,44 @@ static int td_resolve_by_rtti(td_hooks *h, char *why, size_t whysz) {
     }
     if (!h->vtable) { td_set_why(why, whysz, "vtable pointer not found"); return 0; }
 
+    // How many vtables point at this COL, and do they agree on slot 2/3?
+    //
+    // The loop above stops at the first hit, which is the whole reason this
+    // matters. A class with a base subobject has one Complete Object Locator
+    // but its virtual methods can be reached through more than one table (the
+    // primary one and one per derived level), and a game that instantiates a
+    // class through a pointer to a base will call through whichever table that
+    // object actually carries. Patching only the first table installs a hook
+    // that is never called -- which is exactly what the log looks like:
+    // "hooks installed", every slot verified as ours, and then silence.
+    //
+    // So: count them, and log whether the slots agree. If there is more than
+    // one, the first is not automatically the right one, and pretending
+    // otherwise is a hypothesis dressed as a result.
+    {
+        int nvt = 0, agree = 0;
+        uint32_t first_rva = 0;
+        for (const uint8_t *q = h->image; q + 16 < scan_end; q += 8) {
+            if (*(const uint64_t *)q != col_va) continue;
+            void **vt = (void **)(q + 8);
+            uint32_t rva = (uint32_t)(q + 8 - h->image);
+            nvt++;
+            if (!first_rva) first_rva = rva;
+            if (vt[TD_SLOT_BEGIN_RENDER] == h->vtable[TD_SLOT_BEGIN_RENDER] &&
+                vt[TD_SLOT_END_RENDER]   == h->vtable[TD_SLOT_END_RENDER])
+                agree++;
+            if (nvt <= 6)
+                vr_log("  vtable candidate rva=0x%X slot2=%p slot3=%p", rva,
+                       vt[TD_SLOT_BEGIN_RENDER], vt[TD_SLOT_END_RENDER]);
+        }
+        vr_log("  vtables for this COL: %d, agreeing on slot2/3: %d (using "
+               "rva=0x%X)", nvt, agree, h->vtable_rva);
+        if (nvt > 1)
+            vr_log("  NOTE: more than one vtable exists for this class; only "
+                   "rva=0x%X is hooked. If endRender never fires, the object "
+                   "being rendered through a different table.",
+                   h->vtable_rva);
+    }
 
     h->begin = h->vtable[TD_SLOT_BEGIN_RENDER];
     h->end   = h->vtable[TD_SLOT_END_RENDER];

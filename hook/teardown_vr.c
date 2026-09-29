@@ -207,6 +207,7 @@ static uint64_t     g_walk_ptrs_a[TD_WALK_PTR_CAP];
 static uint64_t     g_walk_ptrs_b[TD_WALK_PTR_CAP];
 
 #include "bisect.h"
+#include "census.h"
 // Installed from the init thread before anything else can fault, so a crash
 // anywhere in this process is caught with its real code and faulting module
 // intact -- Sentry's SEH handling loses both.
@@ -549,6 +550,8 @@ static size_t measure_stealable(void* target, size_t max_len) {
 // build_detour, which is compatible.
 #include "present.h"
 #include "dxgi_probe.h"
+#include "census_dxgi.h"   /* after dxgi_probe.h: it reuses the header-verified
+                            * local IID copies defined there */
 #include "present_hook.h"
 
 // Install a hook at `target` with a replay trampoline.
@@ -1682,15 +1685,37 @@ static DWORD WINAPI census_reporter(LPVOID arg) {
         char line[512];
         int  n = 0;
         n += _snprintf(line + n, sizeof(line) - (size_t)n, "SLOT CENSUS deltas:");
+        /* Count how many slots actually moved, rather than testing the string
+         * length. The header is 19 characters, and the old test was `n > 21`,
+         * so a frame in which NO slot moved produced n == 19 and the line was
+         * dropped -- forever. The reporter sat in that branch for the whole run
+         * and the log looked like the census had gone quiet, which reads
+         * exactly like "the hooks are dead", the very thing the census exists
+         * to disprove. */
+        int moved = 0;
         for (int i = 0; i < TDVR_CENSUS_SLOTS; i++) {
             LONG cur = g_census_counters ? g_census_counters[i] : 0;
             LONG d = cur - seen[i];
             seen[i] = cur;
-            if (d > 0)
+            if (d > 0) {
+                moved++;
                 n += _snprintf(line + n, sizeof(line) - (size_t)n,
                                "  [%d]=%ld", i, d);
+            }
         }
-        if (n > 21) vr_log("%s", line);
+        if (moved)
+            vr_log("%s  (moved=%d)", line, moved);
+        else
+            vr_log("SLOT CENSUS: no slot moved this pass (all %d still zero)",
+                   TDVR_CENSUS_SLOTS);
+
+#if TDVR_SLOT_CENSUS
+        /* The DXGI factory census lives in its own file and is polled here
+         * rather than from a second thread: two threads writing the same log
+         * at the same cadence produce interleaved lines, and an interleaved
+         * report is harder to read than a slightly late one. */
+        td_census_report(vr_log);
+#endif
     }
     return 0;
 }
@@ -2299,6 +2324,16 @@ static DWORD WINAPI init_thread(LPVOID unused) {
     if (install_hooks()) {
         g_enabled = 1;
         vr_log("ready");
+
+#if TDVR_SLOT_CENSUS
+        // Path B, and the instrument the project specified at bisect.h:212 and
+        // never built. The class vtable above is a measured dead end -- 48
+        // counting stubs, zero calls, while the game rendered -- so this counts
+        // the DXGI layer underneath instead. Every stub forwards to the real
+        // implementation, so the game keeps running and the numbers are
+        // evidence rather than a change in behaviour.
+        td_census_dxgi();
+#endif
 
 #if TDVR_DXGI_PROBE
         // Path B. The engine's own vtable is unreachable by name (measured: 48
