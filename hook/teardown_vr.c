@@ -2072,18 +2072,19 @@ static int install_hooks(void) {
             CreateThread(NULL, 0, census_reporter, NULL, 0, NULL);
         }
 #if TDVR_FRAME_CENSUS
-        else {
-            /* No class census means no reporter thread; without this the frame
-             * counters would be sampled by nobody and every reading would be
-             * 0 -- indistinguishable from "not called", which is the one
-             * conclusion this instrument exists to test. */
-            vr_log("FRAME CENSUS: no class census in this build; its own reporter");
-            CreateThread(NULL, 0, frame_reporter, NULL, 0, NULL);
-        }
+        /* The frame census is an independent question from the class census, so
+         * it gets its own reporter whether or not the class census ran. This
+         * used to be the `else` of `if (g_hooks.via_rtti)`, which never compiled:
+         * the class-census branch already closed that if, so the else had nothing
+         * to bind to and every TDVR_SLOT_CENSUS build failed at compile time.
+         * Making it unconditional is what the code always meant: a live hook with
+         * no reporter reads exactly like a dead hook. */
+        vr_log("FRAME CENSUS: its own reporter thread");
+        CreateThread(NULL, 0, frame_reporter, NULL, 0, NULL);
 #endif
 #else
         /* The class census above hooks the engine's own C++ objects, which
-         * measured 48/48 slots at zero while the game rendered. This one hooks
+         * measured 48/48 slots at zero while the game rendered. This branch hooks
          * the exported buffer swap instead, and installs whether or not the
          * class census ran -- they are independent questions. */
 #if TDVR_FRAME_CENSUS

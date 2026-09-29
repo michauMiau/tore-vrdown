@@ -30,6 +30,40 @@ jobs:
       - name: Build DLL and injector
         run: sh build.sh
 
+      # Every feature combination must link. Three of the four censuses are
+      # mutually exclusive in practice, and a missing symbol in a branch no
+      # build reaches is invisible until someone flips the flag. On 2026-09-30
+      # an audit found frame_reporter() referenced by a CreateThread and never
+      # defined, in a branch that no build entered.
+      - name: Every census configuration must compile and link
+        run: |
+          set -e
+          for cfg in \
+            "0 0 0" "1 0 0" "0 1 0" "0 0 1" \
+            "0 1 1" "1 1 1" "1 0 1" "1 1 0"
+          do
+            set -- $cfg
+            slot=$1; frame=$2; iat=$3
+            out="build/cfg_slot${slot}_frame${frame}_iat${iat}.dll"
+            echo "--- slot=$slot frame=$frame iat=$iat ---"
+            if ! x86_64-w64-mingw32-gcc -shared -O2 \
+                 -Ithird_party -Ithird_party/openxr \
+                 -DTDVR_XRPROBE=0 -DTDVR_VEH=1 \
+                 -DTDVR_SLOT_CENSUS=$slot \
+                 -DTDVR_FRAME_CENSUS=$frame \
+                 -DTDVR_IAT_CENSUS=$iat \
+                 -o "$out" hook/teardown_vr.c 2>err.txt; then
+              echo "::error::configuration $cfg does not build"
+              cat err.txt
+              exit 1
+            fi
+            if [ -s err.txt ]; then
+              echo "::warning::configuration $cfg built with diagnostics"
+              cat err.txt
+            fi
+            echo "ok: $(stat -c%s "$out") bytes"
+          done
+
       # build.sh has a -shared DLL rule and a console EXE rule. If either
       # silently stopped producing output the steps above would still pass,
       # so check the files exist and are not empty.
