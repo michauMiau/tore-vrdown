@@ -80,7 +80,13 @@ static void td_frame_emit(unsigned char *p, volatile LONG64 *ctr, void *real)
     p[10] = 0xFF; p[11] = 0x00;
     p[12] = 0x48; p[13] = 0xB8;
     memcpy(p + 14, &b, 8);
-    p[22] = 0xFF; p[23] = 0xE0;
+    p[22] = 0xFF; p[23] = 0xE0;         /* jmp rax -- the stub's real exit */
+    /* Fill the rest of the allocation with int3. VirtualAlloc hands back zeroed
+     * pages, and 00 00 decodes as 'add [rax], al': a zero sled. An entry at the
+     * wrong offset, or any fall-through, then spins at 100% CPU with no fault
+     * and no dialog -- the exact hard-lock signature from 2026-09-29 23:47.
+     * int3 converts that silence into a loud, attributable trap. */
+    for (int i = 24; i < 64; i++) p[i] = 0xCC;   /* alloc is 64 B */
 }
 
 /* Patch one export in place. The address comes from GetProcAddress at runtime,
@@ -150,11 +156,21 @@ static int td_frame_patch(const char *name, void *fn, int slot)
      * The earlier version wrote 16 bytes, padding with 11 NOPs that ran into
      * whatever followed in the module's layout. A thunk starts an instruction
      * stream, so 6 bytes cannot split an instruction -- but 16 can corrupt the
-     * next one. Write 6. */
-    static const unsigned char jmp6[6] = { 0xFF, 0x25, 0, 0, 0, 0 };
+     * next one. Write 6.
+     *
+     * The displacement is 4 bytes, not 8. 'FF 25 disp32' dereferences the qword
+     * at rip+disp32, and rip is at+6, so the pointer that must land there is
+     * written to at+2 as 4 bytes with a zero high word. A 2026-09-30 audit found
+     * this line writing 8 -- 2+8 = 10 bytes into a 6-byte instruction, with the
+     * stub address' LOW 32 bits landing in the displacement field. The CPU then
+     * computed at+6+low32(stub) and jumped through whatever was there. It is
+     * fixed and left in the tree as a warning: x64 export thunks are packed at
+     * 6-byte stride, so thunk N+1 begins at exactly at+6, which means those 4
+     * extra bytes are not slack, they are the NEXT EXPORT'S OPCODE. */
+    unsigned char jmp6[6] = { 0xFF, 0x25, 0, 0, 0, 0 };
     memcpy(at, jmp6, 6);
-    unsigned long long tgt = (unsigned long long)(uintptr_t)stub;
-    memcpy(at + 2, &tgt, 8);                  /* overlong on purpose: 2+8 = 10 */
+    int32_t rel = (int32_t)((int64_t)((char *)stub - (char *)(at + 6)));
+    memcpy(at + 2, &rel, 4);
     FlushInstructionCache(GetCurrentProcess(), at, 16);
 
     /* Put the page back the way the loader left it, before anyone can notice. */

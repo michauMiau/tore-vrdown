@@ -34,6 +34,7 @@
 #define TDVR_CENSUS_H
 
 #include <windows.h>
+#include <string.h>   /* memcpy in td_census_emit; frame_census.h cites this reason */
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,7 +75,7 @@ static TdvrCensus g_census;
  * conventions, so a method that expects it to be preserved across the call
  * cannot exist. Alignment is 16 so the 8-byte immediates are not split by a
  * page boundary. */
-static void td_census_emit(unsigned char *p, volatile LONG64 *ctr, void *real)
+static void td_census_emit(unsigned char *p, int alloc, volatile LONG64 *ctr, void *real)
 {
     unsigned long long a = (unsigned long long)(uintptr_t)ctr;
     unsigned long long b = (unsigned long long)(uintptr_t)real;
@@ -83,7 +84,13 @@ static void td_census_emit(unsigned char *p, volatile LONG64 *ctr, void *real)
     p[10] = 0xFF; p[11] = 0x00;
     p[12] = 0x48; p[13] = 0xB8;
     memcpy(p + 14, &b, 8);
-    p[22] = 0xFF; p[23] = 0xE0;
+    p[22] = 0xFF; p[23] = 0xE0;         /* jmp rax -- the stub's real exit */
+    /* Fill the rest of the allocation with int3. VirtualAlloc hands back zeroed
+     * pages, and 00 00 decodes as 'add [rax], al': a zero sled. An entry at the
+     * wrong offset, or any fall-through, then spins at 100% CPU with no fault
+     * and no dialog -- the exact hard-lock signature from 2026-09-29 23:47.
+     * int3 converts that silence into a loud, attributable trap. */
+    for (int i = 24; i < alloc; i++) p[i] = 0xCC;
 }
 
 /* Write a stub over a vtable slot. The vtable is shared with the game's own
@@ -108,7 +115,7 @@ static int td_census_patch(void **vtable, int slot)
     unsigned char *stub = (unsigned char *)VirtualAlloc(NULL, 32,
                             MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     if (!stub) { VirtualProtect(p, 32, old, &old); return 0; }
-    td_census_emit(stub, &g_census.calls[slot], real);
+    td_census_emit(stub, 32, &g_census.calls[slot], real);
 
     FlushInstructionCache(GetCurrentProcess(), stub, 24);
     g_census.real[slot] = real;

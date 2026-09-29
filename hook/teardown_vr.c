@@ -1683,6 +1683,22 @@ static DWORD WINAPI iat_reporter(LPVOID arg) {
 }
 #endif
 
+#if TDVR_FRAME_CENSUS
+/* frame_reporter() was referenced by a CreateThread call that lives in the
+ * #else branch of the class census, but no definition existed anywhere in the
+ * tree. The branch was never taken by any build that also disabled the class
+ * census, so the missing symbol stayed invisible: the census either had a
+ * reporter (class build) or had none (frame build). A build with the class
+ * census off and the frame census on would not have linked. */
+static DWORD WINAPI frame_reporter(LPVOID arg) {
+    (void)arg;
+    for (;;) {
+        Sleep(2000);
+        td_frame_report();
+    }
+}
+#endif
+
 #if TDVR_SLOT_CENSUS
 // A counting stub is 24 bytes of code and 40 bytes of slack. Each one is:
 //     48 B8 <counter>   mov rax, counter address
