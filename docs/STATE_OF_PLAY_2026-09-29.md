@@ -1,69 +1,69 @@
-# Stan projektu — 2026-09-29 00:20 (Europe/Warsaw)
+# Stan projektu — noc 2026-09-29/30
 
-Ostatnia korekta: 2026-09-30 00:20 CEST.
-Właściciel maszyny: vm@192.168.1.6. Repozytorium: michauMiau/tore-vrdown, GPLv3.
+Ostatnia aktualizacja: 2026-09-30 00:56 CEST.
 
-## Jedno zdanie
+## Co jest potwierdzone pomiarem
 
-Teardown na tej maszynie uruchamia się **w OpenGL** (`gfxapi=0`, `x64_gl`), a na dysku
-leży tylko cache shaderów `x64_dx12` — dlatego gra wy exits z kodem 53 zanim cokolwiek
-narysuje, i dlatego żaden pomiar wewnątrz procesu wykonany z mojego zadania nie był
-ważny.
+**1. Gra odmawia startu z mojego zadania, ExitCode 53.**
+```
+Can't load shader cache, platform is wrong 'x64_dx12', expected platform is 'x64_gl'
+gfxapi value="0"
+```
+Ręczny start przez Steam działa. Nie jest to crash ani brak shadera — `GLCache`
+istnieje i zawiera `steamapp_merged_shader_cache.bin` (1 885 969 B), więc OpenGL
+jest używany. Do rozstrzygnięcia pozostaje, dlaczego dokładnie start z zadania
+nie wzniosie frontendu.
 
-## Zmierzone, nie zgadnięte
+**2. Ścieżka prezentacji wciąż nieznana.**
+```
+DXGI CENSUS: 32 slots, hot slot 2 calls=1
+CreateSwapChain (slot 10) calls=0
+TRendererD3D12: 48 slots, 0 calls
+```
+`GLCache` + `x64_gl` przechyla szalę na OpenGL, ale to wciąż wniosek, nie
+pomiar aktywnej ścieżki klatki. IAT census (41 importów) czeka na pomiar.
 
-| fakt | dowód |
+**3. `at+6+disp` potwierdzone na żywo.** Off-by-four naprawiony:
+```
+GDI32!SwapBuffers   thunk 00007ffea23d93e0 -> impl 00007ffea07f4a70
+GDI32!SetPixelFormat                           -> impl 00007ffea0805050
+```
+
+**4. OpenXR działa w czystym procesie:**
+```
+xrCreateInstance=XR_SUCCESS  API=1.1.0  xrGetSystem=35068
+tracking pos=1 orient=1  view config=2  blend mode 1
+```
+
+## Co naprawione tej nocy
+
+| Błąd | Skutek |
 |---|---|
-| Gra probuje OpenGL | `C:\Users\vm\AppData\Local\Teardown\log.txt`: `expected platform is 'x64_gl'`, `gfxapi value="0"` |
-| Wychodzi z kodem 53 | `Start-Process -PassThru` → `ExitCode = 53` (0x35) |
-| Cache shaderów jest z niewłaściwej platformy | ten sam log: `platform is wrong 'x64_dx12'` |
-| `cmd.exe /c start` działa, `Start-Process` nie | 1 proces po 6 s vs `ExitCode 53` po 2 s |
-| Ścieżka DXGI jest martwa | census: 32 sloty factory, dokładnie 1 z wywołaniami; `CreateSwapChain` (slot 10) = 0 |
-| Klasa `TRendererD3D12` nie renderuje | 48 slotów zainstrumentowanych, 0 wywołań przy działającej grze |
-| Eksporty OPENGL32 nie są thunkami | `thunkprobe.c`: `wglSwapBuffers` = `E9 57`, `wglCreateContext` = `33 D2`, `wglMakeCurrent` = `40 55` |
-| Eksporty GDI32 są thunkami `FF 25` | ten sam probe, slot pod `at+6+disp` |
-| Hard lockup 23:47 to był mój błąd | patrz sekcja błędów |
+| `frame_census.h` pisał 8 B do pola disp32 (6 B instrukcji) | skok do śmieci + 4 B na następny thunk; `TDVR_FRAME_PATCH` nigdy nie był zdefiniowany, więc bezobjawowy |
+| ogony stubów nie wypełnione (`VirtualAlloc` → zero) | `00 00` = `add [rax],al` → zero sled → ciche zawiesienie bez dialogu, dokładnie jak hard lock z 23:47 |
+| `frame_reporter()` nie istniało, choć przekazywane do `CreateThread` | build frame+slot nigdy by się nie zlinkował |
+| IAT census bez wątku raportującego | 41 żywych hooków, zero linijek w logu |
+| `else` po nawiasie zamykającym `if (g_hooks.via_rtti)` | **build z `TDVR_SLOT_CENSUS=1` nigdy się nie kompilował** |
+| brak `<string.h>` w `census.h` | `memcpy` działał tylko dzięki include'owi z innego pliku |
 
-## Czego jeszcze nie wiadomo
+CI kompiluje teraz wszystkie 8 kombinacji flag. Pojedynczy build nie widzi
+brakującego symbolu w gałęzi, do której żaden build nie wchodzi.
 
-- Czy `x64_gl` wymaga pobrania shadera, czy problem jest w `options.xml` tylko.
-- Czy po naprawieniu startu gra faktycznie renderuje przez WGL (importy tego dowodzą
-  tylko tyle, że potrafi założyć kontekst, nie że nim renderuje).
-- Czy istnieje w ogóle ścieżka prezentacji klatki dostępna do podpięcia. IAT census
-  (`vr_i1.dll`) został zbudowany, ale nigdy nie zmierzył, bo gra nie wstawała.
+## Straż nocna działa
 
-## Błędy, które kosztowały najwięcej
+`C:	dvr
+ight.ps1` przez task sesji 1, czeka na świeżą grę bez `vr_*.dll`,
+wstrzykuje `vr_k1` (438 831 B, md5 6cebc82808126da95623ea3fc76d4ff6), raportuje
+30 × 10 s, niczego nie ubije.
 
-1. **Skok w siebie** (`hook/frame_census.h`): stub wracał do adresu THUNKU zamiast
-   implementacji. Thunk już prowadził do stuba → nieskończona pętla, brak crashu,
-   brak dialogu Sentry. Poprawka: czytać implementację z dyspozycji **przed** zapisem.
-2. **Off-by-four w tym samym pliku**: slot thunka jest pod `at+6+disp`, nie `at+2+disp`.
-   RIP wskazuje na *następną* instrukcję. Czytanie z `at+2` dawało `a07f4a7000007ffe`.
-   To trzeci raz z rzędu przesunięcie o cztery bajty (dwa wcześniejsze dotyczyły
-   GUID-ów). Dlatego do repo trafiły `thunkprobe.c` i `idataprobe.c`.
-3. **`memcpy` 16 B na instrukcję 6 B** → 11 NOP w najbliższym eksporcie.
-4. **Detour w `GDI32.dll`** → zmiana widoczna dla każdego procesu w sesji. Wyłączone
-   za flagą `TDVR_FRAME_PATCH` (domyślnie 0).
-5. **Zadanie zgłosiło sukces, a nic nie zrobiło**: `Register-ScheduledTask` z principalem
-   `Mechau`, gdy jedynym aktywnym kontem jest `vm`. Do tego `$ErrorActionPreference=
-   'SilentlyContinue'` zamieniał błąd w ciszę.
-6. **Skrypt nie parsował się**: `"$tag: ..."` → PowerShell czyta `$tag:` jako zmienną.
-   Cały plik martwy, `LastTaskResult=1`, zero outputu. Dodana walidacja składni na
-   starcie `auto_run.ps1`.
-7. **AppID zgadnięte z pamięci**: `appmanifest_1245620.acf` nie istnieje; Teardown to
-   `appmanifest_1167630.acf`. Wniosek „Steam nie zna gry" był fałszywy.
+## Najbliższy krok
 
-## Reguły, które wynikają z powyższego
+Wynik IAT census. 41 instrumentowanych importów powie, czy którakolwiek
+klatka przechodzi przez `SwapBuffers`/`wglSwapBuffers` IAT. To rozstrzyga
+OpenGL vs DXGI bez zgadywania i bez pivotu na Zinka.
 
-- Nie ufać `LastTaskResult` ani `task=Ready` jako dowodowi, że coś się wykonało.
-  Jedynym dowodem jest plik raportu z naniesionym czasem powstania.
-- Nie ufać `GetProcAddress == NULL` jako dowodowi braku eksportu, bez niezależnego
-  probe'u. Dwa moje błędy dały ten sam komunikat.
-- Adres implementacji czytać z thunka **przed** zapisem, i weryfikować kanoniczność.
-- Nigdy nie patchować wspólnych bibliotek systemowych.
-- Test z czystą grą **bez moda** przed wnioskiem, że mod coś zabił.
+## Stan
 
-## Następny krok
-
-Naprawić start: sprawdzić, czy istnieje `x64_gl` w cache, i cofnąć `gfxapi`, jeśli
-shaderów nie ma. Potem IAT census na działającym procesie.
+- branch `main`, HEAD `e098d1b`, CI `36642032929` success (8/8 konfiguracji)
+- pełny lifecycle XR nadal nieukończony
+- `xroperator`/MCP niegotowy
