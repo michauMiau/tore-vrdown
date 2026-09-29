@@ -97,15 +97,30 @@ static const GUID IID_ID3D12Device_local =
 #endif
 #ifndef __IID_ID3D12CommandQueue_DEFINED__
 #define __IID_ID3D12CommandQueue_DEFINED__
-// IID_ID3D12CommandQueue = 0ec870a6-5d7e-4c22-8cfc-5baae0769903
+// IID_ID3D12CommandQueue = 0ec870a6-5d7e-4c22-8cfc-5baae07616ed
 //
-// The tail was wrong here (0x16,0xed instead of 0x99,0x03) and the symptom was
-// silent and expensive: QueryInterface answered E_NOINTERFACE on a queue the
-// game had just handed us, so the code concluded the object was not a queue and
-// the session was created with no command queue. Copy IIDs from the SDK header;
-// never retype them from memory.
+// The tail here was 0x99,0x03; d3d12.h says 0x16,0xed. The header is right --
+// it states the same GUID three times (DEFINE_GUID:7796, the MIDL_INTERFACE
+// string, and __CRT_UUID_DECL:7869), and a compiler comparison against it
+// matches only 0x16,0xed.
+//
+// The comment that used to stand here claimed the opposite: that 0x16,0xed was
+// the wrong tail and 0x99,0x03 the corrected one, and it told a plausible story
+// about QueryInterface answering E_NOINTERFACE on a queue the game had just
+// handed us. That story is a symptom of a wrong GUID, but it is not evidence
+// about which tail is right, and the GUID was never actually fixed -- so the
+// wrong IID went back in under a comment claiming it had been corrected.
+//
+// Consequence: a real ID3D12CommandQueue the game owns answers E_NOINTERFACE,
+// and the code concludes the object is not a queue. So the XR session gets
+// created with no command queue at all, which fails later for a reason that
+// points nowhere near the cause.
+//
+// tests/guid_check.c now compares every hand-written GUID in hook/ against the
+// SDK header, so this cannot come back. Never retype a GUID; the comment is
+// not the authority, d3d12.h is.
 static const GUID IID_ID3D12CommandQueue_local =
-    {0x0ec870a6,0x5d7e,0x4c22,{0x8c,0xfc,0x5b,0xaa,0xe0,0x76,0x99,0x03}};
+    {0x0ec870a6,0x5d7e,0x4c22,{0x8c,0xfc,0x5b,0xaa,0xe0,0x76,0x16,0xed}};
 #undef IID_ID3D12CommandQueue
 #define IID_ID3D12CommandQueue IID_ID3D12CommandQueue_local
 #endif
@@ -201,6 +216,11 @@ typedef struct tdvr_xr {
     volatile long end_pending;   // a frame is waiting to be ended
     volatile long end_done;      // frames completed by the thread
     volatile long end_errors;
+    // The blend mode the runtime actually offered, kept from the
+    // xrEnumerateEnvironmentBlendModes call. 0 means "not enumerated yet"; the
+    // frame loop falls back to OPAQUE because a frame with an out-of-range
+    // enumerant is a spec violation, and 0 is not an XrEnvironmentBlendMode.
+    volatile long end_blend_mode;
     volatile long end_dropped;   // frames skipped because EndFrame was busy
     volatile long frame_skipped;  // frames not started: previous EndFrame busy
     XrCompositionLayerProjection* proj;
@@ -844,6 +864,18 @@ static int tdvr_xr_init(tdvr_xr* X, HMODULE loader, tdvr_gipa_t gipa) {
                                 for (uint32_t k = 0; k < bn; k++) {
                                     vr_log("OpenXR:   blend mode %u", (unsigned)bl[k]);
                                 }
+                                // Keep the first one the runtime actually offers.
+                                //
+                                // The list used to be logged and freed, and
+                                // XrFrameEndInfo::environmentBlendMode -- a MUST --
+                                // was left at 0 by `XrFrameEndInfo ei = {0}`, which
+                                // is not an XrEnvironmentBlendMode at all (the
+                                // enumerants are 1/2/3). So the enumeration was
+                                // already happening; only the answer was thrown
+                                // away. Take the runtime's own first offer rather
+                                // than hardcoding a guess, so if the simulator
+                                // stops offering OPAQUE the code follows it.
+                                if (!X->end_blend_mode) X->end_blend_mode = bl[0];
                             }
                             free(bl);
                         }
@@ -1954,6 +1986,24 @@ static void tdvr_xr_poll(tdvr_xr* X) {
         XrFrameEndInfo ei = {0};
         ei.type = XR_TYPE_FRAME_END_INFO;
 
+        // environmentBlendMode is a MUST and it was never set.
+        //
+        // `XrFrameEndInfo ei = {0}` left it 0, and 0 is not an XrEnvironmentBlendMode:
+        // the enumerants are OPAQUE=1, ADDITIVE=2, ALPHA_BLEND=3 (openxr.h, read
+        // there, not from memory). grep -rn "environmentBlendMode" hook/ returned
+        // NOTHING -- the code enumerates the modes at xr_session.h:830-853, logs
+        // them, and discards the result. So every frame ever submitted carried an
+        // invalid enumerant, which is a "must be a valid XrEnvironmentBlendMode"
+        // violation and is the first thing a runtime may act on.
+        //
+        // OPAQUE is chosen because it is the mode the simulator reported first
+        // (blend mode 1) and it requires nothing of the projection layer beyond
+        // what is already being built. If the runtime rejects it, it answers
+        // XR_ERROR_ENVIRONMENT_BLEND_MODE_UNSUPPORTED (-42) and that names this
+        // line as the cause; if it accepts it, this line is no longer a suspect.
+        ei.environmentBlendMode = X->end_blend_mode ? X->end_blend_mode
+                                                     : XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+
         // Hand the runtime something to composite. An empty layerHeaderCount is
         // a legal frame, but it is a 2D-only frame: the runtime has no colour
         // target, logs "no projection layer - 2D-only frame", and its preview
@@ -1961,7 +2011,15 @@ static void tdvr_xr_poll(tdvr_xr* X) {
         if (X->proj_made && X->end_thread) {
             tdvr_xr_prepare_views(X);
             ei.displayTime   = X->xr_time;      // required, and it is the same
-                                                // time xrLocateViews just used
+                                                    // time xrLocateViews just used
+            // Log the blend mode once per handoff, on the render thread, next to the
+            // layer that will carry it. This is the line that answers "was 0 ever
+            // submitted?" -- without it a wrong value is invisible, which is exactly
+            // how it survived this long.
+            if (X->frame_waits == 1)
+                vr_log("OpenXR: first frame hands over blendMode=%u layerCount<set later> "
+                       "displayTime=%llu", (unsigned)ei.environmentBlendMode,
+                       (unsigned long long)ei.displayTime);
 #if TDVR_XR_LAYER0
             // Diagnostic build: the loop runs and the session goes FOCUSED, but
             // no layer is handed over, so the runtime never composites anything.

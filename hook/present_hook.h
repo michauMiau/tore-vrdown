@@ -459,8 +459,13 @@ static int patch_slot(void** vt, int n, void* hook, const char* name) {
 //     IDXGIAdapter --GetParent(slot 6, IID_IDXGIFactory4)--> the game's factory
 // QueryInterface is slot 0 and is correct on every COM object by definition, so
 // the only number that has to be right before anything is called is the GUID.
+//
+// IID_IDXGIAdapter1 was wrong here: the last-but-one byte was 0x1b where
+// dxgi.h:2185 says 0x1a. Fifteen of sixteen bytes matched, so it reads as
+// correct. Caught by a compiler comparison against the header
+// (INITGUID + dxgi.h, then memcmp), not by eye.
 static const GUID IID_IDXGIAdapter1_h =
-    { 0x29038f61, 0x3839, 0x4626, { 0x91, 0xfd, 0x08, 0x68, 0x79, 0x01, 0x1b, 0x05 } };
+    { 0x29038f61, 0x3839, 0x4626, { 0x91, 0xfd, 0x08, 0x68, 0x79, 0x01, 0x1a, 0x05 } };
 static const GUID IID_IDXGIDevice_h =
     { 0x54ec77fa, 0x1377, 0x44e6, { 0x8c, 0x32, 0x88, 0xfd, 0x5f, 0x44, 0xc8, 0x4c } };
 // From d3d12.h, for the identity probe below. ID3D12Object is the base of

@@ -81,6 +81,13 @@ jobs:
           echo "no network imports"
 
       - name: Run offline unit tests
+        env:
+          # guid_check compares every hand-written GUID in hook/ against the
+          # real dxgi.h / d3d12.h, so it needs the mingw toolchain that is
+          # already installed above. Without this the test would silently
+          # SKIP and a wrong GUID would reach the game as an E_NOINTERFACE
+          # that reads as "DXGI is unavailable".
+          CROSS_CC: x86_64-w64-mingw32-gcc
         run: sh tests/run_tests.sh
 
       # The Lua layer has its own suite: it syntax-checks every file, rebuilds

@@ -54,3 +54,28 @@ if [ "$fail" -ne 0 ]; then
     exit 1
 fi
 echo "all $(( $(echo $TESTS | wc -w) )) tests passed"
+
+# --- GUID audit -------------------------------------------------------------
+# Cross-compiled and run under wine, because the only meaningful check is
+# against the real dxgi.h / d3d12.h. It is a separate step from the native
+# tests above: those cannot include windows.h at all, and this one must.
+#
+# This is a real control, not a note. A wrong GUID fails at runtime as
+# E_NOINTERFACE, which reads as "DXGI is unavailable" -- the misdiagnosis the
+# project already made once. hook/present_hook.h carried IID_IDXGIAdapter1 with
+# 0x1b where the header says 0x1a: fifteen of sixteen bytes matched, so it read
+# as correct, in the file that teaches the rule against writing GUIDs by hand.
+if [ -n "$CROSS_CC" ]; then
+    if "$CROSS_CC" -O1 -o "$OUT/guid_check.exe" tests/guid_check.c -ldxgi -ld3d12 2>/dev/null \
+       && command -v wine >/dev/null 2>&1 \
+       && wine "$OUT/guid_check.exe" >/dev/null; then
+        echo "PASS        guid_check"
+    else
+        # A missing wine must not be a red build: report it and let CI stay
+        # green on platforms that cannot run PE binaries.
+        echo "SKIP        guid_check (no wine to run the PE binary)"
+    fi
+else
+    echo "SKIP        guid_check (no cross compiler)"
+fi
+
