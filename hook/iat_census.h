@@ -76,6 +76,43 @@ static const char *TDVR_IAT_LIBS[] = {
     "vulkan-1.dll", "GLU32.dll", "d3d9.dll",
 };
 
+/* Within those libraries, only these functions. See TDVR_IAT_ONLY below. */
+static const char *TDVR_IAT_FNS[] = { "SwapBuffers" };
+
+/* The census that measured "41 hooked, 0 refused" followed the game from
+ * 1731 MB down to 85 MB over twenty minutes and left it in a state where
+ * Sentry showed an exception while the process kept running. It hooked EVERY
+ * import in eight graphics libraries -- 41 of them -- including the ones on
+ * the window-creation path: SetPixelFormat, wglCreateContext, wglMakeCurrent.
+ *
+ * Those are not per-frame. They run once, during startup, and a stub that
+ * tail-jumps back into a GDI32 or OPENGL32 forwarder that itself touches loader
+ * state is exactly the shape of thing that leaves a graphics context half
+ * initialised. Whatever the precise mechanism, the measured fact is enough to
+ * stop doing it: 41 hooks answered no question that 1 does not.
+ *
+ * One import answers the only question being asked -- does a frame end through
+ * the import table -- and cannot plausibly disturb startup. Set
+ * TDVR_IAT_NARROW=0 to restore the wide behaviour if the narrow one proves
+ * nothing. */
+#ifndef TDVR_IAT_NARROW
+#define TDVR_IAT_NARROW 1
+#endif
+
+/* Whether this specific function should be hooked. Narrow by default: the
+ * wide sweep was measured to bleed the game's memory from 1731 MB to 85 MB. */
+static int td_iat_watch_fn(const char *name)
+{
+#if TDVR_IAT_NARROW
+    for (unsigned i = 0; i < sizeof TDVR_IAT_FNS / sizeof TDVR_IAT_FNS[0]; i++)
+        if (_stricmp(name, TDVR_IAT_FNS[i]) == 0) return 1;
+    return 0;
+#else
+    (void)name;
+    return 1;
+#endif
+}
+
 static int td_iat_watch_dll(const char *name)
 {
     for (unsigned i = 0; i < sizeof TDVR_IAT_LIBS / sizeof TDVR_IAT_LIBS[0]; i++)
@@ -162,10 +199,29 @@ static void td_iat_scan(void)
             ? (IMAGE_THUNK_DATA *)(host + d->OriginalFirstThunk) : NULL;
         for (; th->u1.Function; th++, og++) {
             if (n >= TDVR_IAT_MAX) { vr_log("  iat: table full at %d entries", n); break; }
-            if (og && (og->u1.Ordinal & 0x80000000u)) continue;      /* by ordinal */
-            const char *fname = "?";
-            if (og && !(og->u1.Ordinal & 0x80000000u))
-                fname = (const char *)((IMAGE_IMPORT_BY_NAME *)og->u1.AddressOfData)->Name;
+            /* A RVA is not an address. The load base is applied on the way in
+             * via host + rva; without that the pointer read here lands wherever
+             * the value happens to point, _stricmp silently matches nothing,
+             * and the census installs zero hooks while reporting nothing at
+             * all. The measured symptom of exactly that was a log that stopped
+             * after "host SizeOfImage" with no summary line. */
+            if (!og) {
+                vr_log("  iat: a %s import has no INT entry, cannot name it", dll);
+                continue;
+            }
+            if (og->u1.Ordinal & 0x80000000u) continue;           /* by ordinal */
+            DWORD nrva = og->u1.AddressOfData;
+            if (nrva == 0 || nrva >= nt->OptionalHeader.SizeOfImage) {
+                vr_log("  iat: a %s import has an INT entry outside the image (rva 0x%X)", dll, nrva);
+                continue;
+            }
+            const char *fname =
+                (const char *)((IMAGE_IMPORT_BY_NAME *)(host + nrva))->Name;
+            if (nrva + sizeof(IMAGE_IMPORT_BY_NAME) + 1 > nt->OptionalHeader.SizeOfImage) {
+                vr_log("  iat: %s import name runs off the end of the image", dll);
+                continue;
+            }
+            if (!td_iat_watch_fn(fname)) continue;
             TdvrIatEnt *e = &g_iat[n++];
             e->dll    = dll;
             e->fn     = fname;
