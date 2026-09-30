@@ -229,14 +229,33 @@ static void tdvr_px_sample(void)
  * thing to do -- a probe that quietly halves the game's performance and reports
  * a clean number is worse than no probe.
  */
-#if TDVR_IAT_CALL_STUB
-#if TDVR_PIXEL_PROBE
-static volatile LONG64 g_px_on_game_thread;
-static volatile LONG64 g_px_here_hdc;
-static volatile LONG64 g_px_here_ctx;
+/* Brightness accumulators, declared OUTSIDE the guard that hides the rest of
+ * the on-present state. The report below reads them and is gated only by
+ * TDVR_PIXEL_PROBE, so keeping them inside TDVR_IAT_CALL_STUB made eight of the
+ * thirty-two flag combinations fail to compile -- identical to the guard
+ * mismatch that left frame_reporter undefined, and invisible until all
+ * combinations are built.
+ *
+ * I also committed and pushed that regression without reading the build count
+ * first. The number under the command was the thing to look at. */
 static volatile LONG64 g_px_sum_min;
 static volatile LONG64 g_px_sum_max;
 static volatile LONG64 g_px_sum_all;
+
+#if TDVR_IAT_CALL_STUB
+#if TDVR_PIXEL_PROBE
+/* The accumulators live OUTSIDE the guard, because the report that reads them
+ * is gated only by TDVR_PIXEL_PROBE. Inside this block they were invisible to
+ * the PIXEL_PROBE=1 / CALL_STUB=0 builds, so eight of the thirty-two stopped
+ * compiling -- the same guard mismatch as the frame_reporter that was never
+ * defined, and the same reason it only shows up when all combinations are built.
+ *
+ * I committed and pushed that regression without reading the count first,
+ * which is the part worth remembering: the number under the command was the
+ * thing I should have looked at. */
+static volatile LONG64 g_px_on_game_thread;
+static volatile LONG64 g_px_here_hdc;
+static volatile LONG64 g_px_here_ctx;
 
 #ifndef TDVR_PIXEL_EVERY
 #define TDVR_PIXEL_EVERY 60      /* one read every 60 presents */
