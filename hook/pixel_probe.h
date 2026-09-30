@@ -234,6 +234,9 @@ static void tdvr_px_sample(void)
 static volatile LONG64 g_px_on_game_thread;
 static volatile LONG64 g_px_here_hdc;
 static volatile LONG64 g_px_here_ctx;
+static volatile LONG64 g_px_sum_min;
+static volatile LONG64 g_px_sum_max;
+static volatile LONG64 g_px_sum_all;
 
 #ifndef TDVR_PIXEL_EVERY
 #define TDVR_PIXEL_EVERY 60      /* one read every 60 presents */
@@ -281,6 +284,21 @@ static void tdvr_px_on_present(HDC real)
     }
     if (max == min) InterlockedIncrement64(&g_px_uniform);
     else            InterlockedIncrement64(&g_px_varying);
+
+    /* A variance test says a frame is not uniform. It cannot say what is in
+     * it, and "not uniform" is true of a death screen, a loading frame and a
+     * menu just as much as of gameplay. So the extremes and the mean of the
+     * sample get reported too: a 4x4 read of a real scene spreads across a
+     * wide range with a mid-range mean, while a black or white frame collapses
+     * to one end. This is the difference between "something was there" and
+     * "something was there and I can say roughly what".
+     *
+     * Accumulated rather than logged per sample, because logging 3000 times
+     * would be the same log spam that once made this file look dead. The
+     * averages are over samples that actually read, not over presents. */
+    InterlockedExchangeAdd64(&g_px_sum_min, (LONG64)min);
+    InterlockedExchangeAdd64(&g_px_sum_max, (LONG64)max);
+    InterlockedExchangeAdd64(&g_px_sum_all, (LONG64)(min + max) / 2);
 }
 #endif /* TDVR_PIXEL_PROBE */
 #endif /* TDVR_IAT_CALL_STUB */
@@ -329,6 +347,16 @@ static void tdvr_px_report(void)
     vr_log("  glReadPixels error   %lld", glerr);
     vr_log("  flat (not a frame)   %lld", flat);
     vr_log("  VARIED (real pixels) %lld", varying);
+    if (reads > 0) {
+        /* Averages over the samples that actually read a frame. Without these
+         * three numbers "VARIED" is a yes/no that cannot distinguish a
+         * gameplay frame from a loading screen or a death screen -- all three
+         * are non-uniform, and only the levels say which one it was. */
+        vr_log("  brightness  min %.0f  max %.0f  mid %.0f   (over %lld reads)",
+                (double)g_px_sum_min / (double)reads,
+                (double)g_px_sum_max / (double)reads,
+                (double)g_px_sum_all / (double)reads, reads);
+    }
 
     if (!reads) {
         vr_log("  never ran -- the present hook is not calling into this");
