@@ -391,15 +391,47 @@ static FILE* vr_open_log(void) {
     return NULL;
 }
 
+// vr_log is called from the census thread, the pixel worker, the pixel reporter,
+// the pbuffer thread, the on-present handler (i.e. on the game's own render
+// thread) and the main thread. Before this lock, all of them shared one FILE*
+// with no synchronisation: two threads inside fprintf on the same stream is
+// undefined behaviour, and it showed up as a log line that simply did not
+// exist -- the pbuffer thread got as far as "pixel format 12" and then its next
+// vr_log vanished, because the reporter was writing at the same time.
+//
+// This is a CRITICAL_SECTION rather than a plain volatile flag, so that
+// re-entry is safe. The on-present handler runs on the game's render thread, so
+// a deadlock here would freeze the game rather than just lose a line -- which is
+// the one failure mode that matters most in this project. An SRWLOCK or a
+// spinlock would both be a hang waiting on a thread the game owns.
+//
+// The handle is created lazily through InitOnceExecuteOnce rather than in
+// DllMain, because a critical section needs a heap allocation and DllMain runs
+// under the loader lock.
+static CRITICAL_SECTION g_log_lock;
+static INIT_ONCE       g_log_lock_once = INIT_ONCE_STATIC_INIT;
+
+static BOOL CALLBACK vr_log_lock_init(PINIT_ONCE once, PVOID param, PVOID *ctx) {
+    (void)once; (void)param; (void)ctx;
+    InitializeCriticalSection(&g_log_lock);
+    return TRUE;
+}
+
 static void vr_log(const char* fmt, ...) {
+    // A logging failure must never take the process down. If the lock cannot be
+    // taken, drop the line: an unreadable log beats a frozen game.
+    if (!InitOnceExecuteOnce(&g_log_lock_once, vr_log_lock_init, NULL, NULL)) return;
+
+    EnterCriticalSection(&g_log_lock);
     if (!g_log) {
         g_log = vr_open_log();
-        if (!g_log) return;
+        if (!g_log) { LeaveCriticalSection(&g_log_lock); return; }
     }
     va_list a; va_start(a, fmt);
     fprintf(g_log, "[VR] "); vfprintf(g_log, fmt, a); fprintf(g_log, "\n");
     fflush(g_log);
     va_end(a);
+    LeaveCriticalSection(&g_log_lock);
 }
 
 // ---------------------------------------------------------------------------
@@ -552,7 +584,8 @@ static size_t measure_stealable(void* target, size_t max_len) {
 #include "dxgi_probe.h"
 #include "census_dxgi.h"
 #include "frame_census.h"
-#include "pixel_probe.h"   /* before iat_census.h: px_worker calls tdvr_px_sample */
+#include "pixel_probe.h"
+#include "offscreen_probe.h"   /* before iat_census.h: px_worker calls tdvr_px_sample */
 #include "iat_census.h"   /* after dxgi_probe.h: it reuses the header-verified
                             * local IID copies defined there */
 #include "present_hook.h"
@@ -2113,6 +2146,12 @@ static int install_hooks(void) {
          * visible in one place. */
         CreateThread(NULL, 0, px_worker, NULL, 0, NULL);
         CreateThread(NULL, 0, px_reporter, NULL, 0, NULL);
+        /* Our own off-screen target, on its own thread: an FBO, after the
+         * pbuffer was built and measured to be unavailable on this driver. It is
+         * started here rather than from DllMain because it makes a context
+         * current, and a loader lock held while a driver call blocks is a
+         * deadlock. */
+        tdvr_fb_start();
 #endif
 #endif
         // Each of the two vtable slots is patched independently, so which one is

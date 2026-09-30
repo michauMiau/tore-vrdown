@@ -93,6 +93,11 @@ static volatile LONG64 g_px_idle;         /* wait cycles that timed out -- if th
 typedef void      (*TDVR_PFNGLREADPIXELS)(int, int, int, int, int, int, void *);
 typedef tdvr_u8 * (*TDVR_PFNGLGETSTRING)(unsigned);
 typedef const unsigned char * (*TDVR_PFNGLGETERROR)(void);
+typedef void      (*TDVR_PFNGLVIEWPORT)(int, int, int, int);
+typedef void      (*TDVR_PFNGLCLEARCOLOR)(float, float, float, float);
+typedef void      (*TDVR_PFNGLCLEAR)(unsigned);
+typedef void      (*TDVR_PFNGLDRAWARRAYS)(unsigned, int, int);
+typedef void      (*TDVR_PFNGLFINISH)(void);
 
 /* Resolve the three entry points once. These are GL 1.1 core, so they must come
  * from the same context the game is using -- not from a fresh one, and not from
@@ -100,6 +105,15 @@ typedef const unsigned char * (*TDVR_PFNGLGETERROR)(void);
 static TDVR_PFNGLREADPIXELS     g_glReadPixels;
 static TDVR_PFNGLGETSTRING      g_glGetString;
 static TDVR_PFNGLGETERROR       g_glGetError;
+
+/* Needed by pbuffer_probe.h to draw and read back into a target of our own.
+ * Same resolution path as the two above, one load, one try-flag, no second
+ * copy of the game''s GL state. */
+static TDVR_PFNGLVIEWPORT        g_glViewport;
+static TDVR_PFNGLCLEARCOLOR      g_glClearColor;
+static TDVR_PFNGLCLEAR           g_glClear;
+static TDVR_PFNGLDRAWARRAYS      g_glDrawArrays;
+static TDVR_PFNGLFINISH          g_glFinish;
 
 static int tdvr_px_resolve(void)
 {
@@ -128,6 +142,29 @@ static int tdvr_px_resolve(void)
         return 0;
     }
     vr_log("  px: GL_READPIXELS resolved (GL 1.1 core, same context as the game)");
+
+    /* The draw-side entry points. Optional: a probe that only reads does not
+     * need them, and a driver that lacks one of them should not stop the read
+     * path from working. pbuffer_probe.h checks each before it calls it. */
+    union { FARPROC p; TDVR_PFNGLVIEWPORT   f; } u4;
+    union { FARPROC p; TDVR_PFNGLCLEARCOLOR f; } u5;
+    union { FARPROC p; TDVR_PFNGLCLEAR      f; } u6;
+    union { FARPROC p; TDVR_PFNGLDRAWARRAYS f; } u7;
+    union { FARPROC p; TDVR_PFNGLFINISH     f; } u8;
+    u4.p = GetProcAddress(gl, "glViewport");
+    u5.p = GetProcAddress(gl, "glClearColor");
+    u6.p = GetProcAddress(gl, "glClear");
+    u7.p = GetProcAddress(gl, "glDrawArrays");
+    u8.p = GetProcAddress(gl, "glFinish");
+    g_glViewport   = u4.f;
+    g_glClearColor = u5.f;
+    g_glClear      = u6.f;
+    g_glDrawArrays = u7.f;
+    g_glFinish     = u8.f;
+    vr_log("  px: draw-side glViewport=%p glClearColor=%p glClear=%p "
+           "glDrawArrays=%p glFinish=%p",
+           (void *)g_glViewport, (void *)g_glClearColor, (void *)g_glClear,
+           (void *)g_glDrawArrays, (void *)g_glFinish);
     return 1;
 }
 

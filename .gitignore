@@ -118,3 +118,9 @@ desktop.ini
 !rate.ps1          # measures the reporter's real period from file growth,
                    # instead of assuming one
 
+
+# Permanent instruments, added 2026-09-30: the ignore rule above exists for
+# the 340 one-shot probes, but these are the repeatable harnesses and they
+# were never in the repository because of it.
+!run_v1.ps1
+!gline.ps1
