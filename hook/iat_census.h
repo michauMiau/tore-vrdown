@@ -53,6 +53,22 @@ extern "C" {
 
 #define TDVR_IAT_MAX 768
 
+#if TDVR_IAT_CALL_STUB
+/* The handler is given the game's HDC, which is simply whatever is in RCX when
+ * SwapBuffers was entered. The stub never writes RCX -- that is the one rule
+ * this whole arrangement rests on, and build/audit_stub.py fails the build if a
+ * "mov rcx" reappears in the emitter.
+ *
+ * Two earlier versions got this wrong in ways that looked right on the page.
+ * The first passed the hook entry in RCX, so the real SwapBuffers received a
+ * struct pointer where its HDC belonged and the game died on the first present.
+ * The second passed a CONTEXT*, assuming a stub has the caller's registers
+ * available; it does not, because a stub is not an exception handler, so
+ * ctx->Rcx was whatever happened to sit at the handler's own entry point.
+ */
+typedef void (*TdvrIatHandler)(HDC hdc);
+#endif
+
 typedef struct TdvrIatEnt {
     const char       *dll;
     const char       *fn;
@@ -61,6 +77,9 @@ typedef struct TdvrIatEnt {
     volatile LONG64  *calls;
     unsigned char    *stub;
     int               hooked;
+#if TDVR_IAT_CALL_STUB
+    TdvrIatHandler    handler;    /* runs on the game's thread at the hook */
+#endif
 } TdvrIatEnt;
 
 static TdvrIatEnt          g_iat[TDVR_IAT_MAX];
@@ -142,15 +161,102 @@ static int td_iat_watch_dll(const char *name)
     return 0;
 }
 
+/* The counter stub, 24 bytes, and the shape of the problem it creates.
+ *
+ *     48 B8 <ctr>          mov  rax, ctr
+ *     FF 00                inc  qword ptr [rax]
+ *     48 B8 <forward>      mov  rax, forward
+ *     FF E0                jmp  rax
+ *
+ * It counts and it forwards, and that is all 24 bytes allow. The displacement is
+ * the only space there is, so there is no room for a call, and therefore no way
+ * to run code on the game's thread at the moment it presents.
+ *
+ * That matters now. The pixel probe reads GL_BACK from a worker thread and gets
+ * "no current HDC" every single time, 9624 out of 9624 -- because a GL context
+ * is current only on the thread that made it current. Reading pixels from any
+ * other thread cannot work, no matter how the read is coded.
+ *
+ * So the dispatch stub below adds exactly one thing: a single indirect call,
+ * through a function pointer, to code that runs on the game's own thread. The
+ * counter stub stays the default because it is the one thing that has been
+ * stable all night, and the wider stub is opt-in.
+ */
+
+/* Layout: inc the counter, call the handler, jump to the original.
+ *   48 B8 <ctr>        mov   rax, ctr
+ *   FF 00              inc   qword ptr [rax]
+ *   48 B8 <fn>         mov   rax, handler
+ *   48 B8 <ctx>        mov   rcx, ent
+ *   FF D0              call  rax
+ *   48 B8 <forward>    mov   rax, forward
+ *   FF E0              jmp   rax
+ * 47 bytes, indices 0..46 inclusive. Handler is called with the entry as RCX.
+ * Windows x64 gives the callee shadow space, so the handler must not assume
+ * anything about its arguments afterwards. */
+#define TDVR_STUB_CALL_SIZE 47
+
 static void td_iat_emit(unsigned char *p, volatile LONG64 *ctr, void *forward)
 {
     unsigned long long a = (unsigned long long)(uintptr_t)ctr;
     unsigned long long b = (unsigned long long)(uintptr_t)forward;
-    p[0]  = 0x48; p[1]  = 0xB8;  memcpy(p + 2,  &a, 8);
-    p[10] = 0xFF; p[11] = 0x00;
-    p[12] = 0x48; p[13] = 0xB8;  memcpy(p + 14, &b, 8);
-    p[22] = 0xFF; p[23] = 0xE0;
+    p[0]  = 0x48; p[1]  = 0xB8;  memcpy(p + 2,  &a, 8);       /* mov rax, ctr    */
+    p[10] = 0x48; p[11] = 0xFF; p[12] = 0x00;                 /* inc qword [rax] */
+    p[13] = 0x48; p[14] = 0xB8;  memcpy(p + 15, &b, 8);       /* mov rax, fwd    */
+    p[23] = 0xFF; p[24] = 0xE0;                               /* jmp rax         */
 }
+
+#if TDVR_IAT_CALL_STUB
+/* Emitted only when the entry has a handler.
+ *
+ * The forwarding tail is byte-identical to the counter stub, which is the part
+ * that has been verified stable all night. What differs is the call in the
+ * middle, and above all what the handler is handed.
+ *
+ * The first version passed the entry in RCX. That crashed the game, and the
+ * reason is worth writing down: this stub IS the function SwapBuffers, so
+ * whatever ends up in RCX is what the real SwapBuffers receives as its HDC
+ * argument. Handing GDI32 a pointer to a hook entry is a hard crash, which is
+ * the Sentry dialog of 2026-09-30 -- the handler ran, logged "ON GAME THREAD
+ * 60 presents", and the process died. The VEH never saw an exception because
+ * the failure happened inside Sentry's own handler, not as a raised fault.
+ *
+ * So the handler gets a pointer to the CONTEXT and reads the real arguments
+ * out of it. Nothing it does can reach the game's argument registers. The only
+ * register the stub itself touches is RAX, which the counting prologue already
+ * used and which SwapBuffers does not read as an argument.
+ *
+ * The push/sub around the call is not decoration. At the call site RSP is 8 mod
+ * 16, because the caller's return address pushed 8, so a bare call would enter
+ * the handler misaligned and any SSE store would fault. The push restores
+ * 16-byte alignment and 0x28 covers 32 bytes of shadow space plus the 8 the
+ * return address will take.
+ *
+ * THE OFFSETS BELOW ARE GENERATED, NOT COUNTED. build/audit_stub.py holds this
+ * layout as data and fails the build if the numbers here disagree with it, or
+ * if any two instructions are not adjacent. Getting this wrong three times in
+ * one night -- once by 8-byte immediates written one byte early, which left
+ * 0xCC gaps and an int3 on the hot path -- is what the audit exists to make
+ * impossible a fourth time.
+ */
+static void td_iat_emit_call(unsigned char *p, volatile LONG64 *ctr,
+                             void *forward, TdvrIatHandler h)
+{
+    unsigned long long a = (unsigned long long)(uintptr_t)ctr;
+    unsigned long long b = (unsigned long long)(uintptr_t)forward;
+    unsigned long long c = (unsigned long long)(uintptr_t)h;
+    p[0]  = 0x48; p[1]  = 0xB8;  memcpy(p + 2,  &a, 8);       /*  0.. 9  ctr    */
+    p[10] = 0x48; p[11] = 0xFF; p[12] = 0x00;                 /* 10..12  inc     */
+    p[13] = 0x48; p[14] = 0xB8;  memcpy(p + 15, &c, 8);       /* 13..22  handler */
+    p[23] = 0x50;                                             /* 23..23  push    */
+    p[24] = 0x48; p[25] = 0x83; p[26] = 0xEC; p[27] = 0x28;   /* 24..27  sub rsp */
+    p[28] = 0xFF; p[29] = 0xD0;                               /* 28..29  call    */
+    p[30] = 0x48; p[31] = 0x83; p[32] = 0xC4; p[33] = 0x28;   /* 30..33  add rsp */
+    p[34] = 0x58;                                             /* 34..34  pop     */
+    p[35] = 0x48; p[36] = 0xB8;  memcpy(p + 37, &b, 8);       /* 35..44  fwd     */
+    p[45] = 0xFF; p[46] = 0xE0;                               /* 45..46  jmp     */
+}
+#endif
 
 /* Install a stub over one IAT slot. */
 static int td_iat_hook(TdvrIatEnt *e)
@@ -163,10 +269,25 @@ static int td_iat_hook(TdvrIatEnt *e)
         InterlockedIncrement(&g_iat_refused);
         return 0;
     }
-    unsigned char *stub = (unsigned char *)VirtualAlloc(NULL, 32,
+#if TDVR_IAT_CALL_STUB
+    /* A handler makes the stub wider, so the allocation is sized from what is
+     * actually emitted rather than assumed. The 0xCC tail fill matters: a stub
+     * that runs off its end into a zero byte decodes as "add [rax], al" and
+     * the page becomes a silent zero sled instead of an int3 trap. */
+    size_t stub_size = e->handler ? TDVR_STUB_CALL_SIZE : 24;
+    unsigned char *stub = (unsigned char *)VirtualAlloc(NULL, stub_size + 16,
                             MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     if (!stub) return 0;
+    memset(stub, 0xCC, stub_size + 16);
+    if (e->handler) td_iat_emit_call(stub, e->calls, e->forward, e->handler);
+    else            td_iat_emit(stub, e->calls, e->forward);
+#else
+    unsigned char *stub = (unsigned char *)VirtualAlloc(NULL, 40,
+                            MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    if (!stub) return 0;
+    memset(stub, 0xCC, 40);
     td_iat_emit(stub, e->calls, e->forward);
+#endif
 
     /* Since Windows 10 the loader may leave the IAT read-only, so the page has
      * to be opened for writing. If that fails the entry is reported, never
@@ -188,6 +309,67 @@ static int td_iat_hook(TdvrIatEnt *e)
     InterlockedIncrement(&g_iat_hooked);
     return 1;
 }
+
+/* Call into the pixel probe from inside the SwapBuffers stub.
+ *
+ * The counter stub is "mov rax,imm64; inc qword ptr [rax]; jmp rax" -- it is
+ * exactly the size of the displacement, and there is no room in it for a call.
+ * Enlarging it to make space would mean rewriting the game's slot with a
+ * bigger thunk, which changes the shape of the one thing that has been stable
+ * all night.
+ *
+ * So instead of growing the stub, the probe runs on its own thread and is
+ * driven by the counter. That keeps the counter stub untouched and still
+ * answers the question the probe exists for: whether real pixels can be read
+ * at all from this context. The pixel content does not have to be sampled at
+ * the exact present instant to establish THAT -- if a frame can be read here,
+ * the next step is reading it at the exact present instant once the stub shape
+ * changes deliberately.
+ *
+ * Being explicit about the limit: this proves pixels are reachable and
+ * non-flat. It does not yet prove the read is synchronised with the frame the
+ * game just drew, because the thread is not the render thread.
+ */
+#if TDVR_PIXEL_PROBE
+static DWORD WINAPI px_worker(LPVOID arg)
+{
+    (void)arg;
+
+    /* Wait on the SwapBuffers counter, which the IAT stub really does
+     * increment -- NOT on g_px_reads, which only tdvr_px_sample() increments.
+     * The first version of this function waited on its own output, so the
+     * counter it was watching could never move, the inner wait always timed
+     * out, and the probe reported "0 frames at the present" forever while
+     * looking perfectly healthy in the log. A probe that reports its own
+     * idleness as a finding is worse than no probe: it looks like data.
+     *
+     * If the wait never times out, that is the bug, not the absence of frames.
+     */
+    LONG64 seen = 0;
+    LONG64 idle = 0;
+    for (;;) {
+        int waited = 0;
+        while (waited < 100) {
+            LONG64 now = 0;
+            if (g_iat_n > 0) {
+                for (int i = 0; i < (int)g_iat_n; i++) {
+                    if (!g_iat[i].hooked) continue;
+                    if (!strstr(g_iat[i].fn, "SwapBuffers")) continue;
+                    now = (LONG64)InterlockedCompareExchange64(
+                              (volatile LONG64 *)g_iat[i].calls, 0, 0);
+                    break;
+                }
+            }
+            if (now != seen) { seen = now; break; }
+            Sleep(20); waited++;
+        }
+        if (waited >= 100) { idle++; InterlockedIncrement64(&g_px_idle); Sleep(500); continue; }
+        if (seen == 0) continue;
+
+        tdvr_px_sample();
+    }
+}
+#endif
 
 /* Walk the game's import directory and hook every graphics entry. */
 static void td_iat_scan(void)
@@ -245,6 +427,15 @@ static void td_iat_scan(void)
             }
             if (!td_iat_watch_fn(fname)) continue;
             TdvrIatEnt *e = &g_iat[n++];
+#if TDVR_IAT_CALL_STUB && TDVR_PIXEL_PROBE
+            /* Only SwapBuffers gets a handler. A handler runs on the game's
+             * thread inside its present, so it must be limited to the one call
+             * that has been measured at exactly once per frame. The 41-hook
+             * sweep already showed what happens when this is not deliberate:
+             * the process bled out from 1731 MB to 85 MB in twenty minutes. */
+            e->handler = (_stricmp(fname, "SwapBuffers") == 0)
+                       ? (TdvrIatHandler)tdvr_px_on_present : NULL;
+#endif
             e->dll    = dll;
             e->fn     = fname;
             e->forward = (void *)th->u1.Function;

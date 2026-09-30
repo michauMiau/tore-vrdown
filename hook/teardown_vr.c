@@ -552,6 +552,7 @@ static size_t measure_stealable(void* target, size_t max_len) {
 #include "dxgi_probe.h"
 #include "census_dxgi.h"
 #include "frame_census.h"
+#include "pixel_probe.h"   /* before iat_census.h: px_worker calls tdvr_px_sample */
 #include "iat_census.h"   /* after dxgi_probe.h: it reuses the header-verified
                             * local IID copies defined there */
 #include "present_hook.h"
@@ -2105,6 +2106,14 @@ static int install_hooks(void) {
          * instead of by rewriting shared system code. */
         td_iat_scan();
         CreateThread(NULL, 0, iat_reporter, NULL, 0, NULL);
+#if TDVR_PIXEL_PROBE
+        /* The probe has to exist before the scan, because px_worker is driven
+         * by the presents the scan hooks. Starting it after would still work,
+         * but starting it here keeps the "hook installed then probe reads" order
+         * visible in one place. */
+        CreateThread(NULL, 0, px_worker, NULL, 0, NULL);
+        CreateThread(NULL, 0, px_reporter, NULL, 0, NULL);
+#endif
 #endif
         // Each of the two vtable slots is patched independently, so which one is
         // responsible for the crash can be established by leaving one alone.
