@@ -249,9 +249,9 @@ static void td_iat_emit_call(unsigned char *p, volatile LONG64 *ctr,
     p[10] = 0x48; p[11] = 0xFF; p[12] = 0x00;                 /* 10..12  inc     */
     p[13] = 0x48; p[14] = 0xB8;  memcpy(p + 15, &c, 8);       /* 13..22  handler */
     p[23] = 0x50;                                             /* 23..23  push    */
-    p[24] = 0x48; p[25] = 0x83; p[26] = 0xEC; p[27] = 0x28;   /* 24..27  sub rsp */
+    p[24] = 0x48; p[25] = 0x83; p[26] = 0xEC; p[27] = 0x20;   /* 24..27  sub rsp */
     p[28] = 0xFF; p[29] = 0xD0;                               /* 28..29  call    */
-    p[30] = 0x48; p[31] = 0x83; p[32] = 0xC4; p[33] = 0x28;   /* 30..33  add rsp */
+    p[30] = 0x48; p[31] = 0x83; p[32] = 0xC4; p[33] = 0x20;   /* 30..33  add rsp */
     p[34] = 0x58;                                             /* 34..34  pop     */
     p[35] = 0x48; p[36] = 0xB8;  memcpy(p + 37, &b, 8);       /* 35..44  fwd     */
     p[45] = 0xFF; p[46] = 0xE0;                               /* 45..46  jmp     */
