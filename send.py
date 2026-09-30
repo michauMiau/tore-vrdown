@@ -30,16 +30,15 @@ for c in chunks:
     if r.returncode:
         print("CHUNK FAILED:", r.stderr[:200]); sys.exit(1)
 
-script = (
-    '$x = [IO.File]::ReadAllText("C:\\\\tdvr\\\\b64in.txt")\n'
-    '[IO.File]::WriteAllBytes("C:\\\\tdvr\\\\%s", [Convert]::FromBase64String($x))\n'
-    '"md5   " + (Get-FileHash C:\\\\tdvr\\\\%s -Algorithm MD5).Hash\n'
-    '"bytes " + (Get-Item C:\\\\tdvr\\\\%s).Length\n'
-    '$e = $null\n'
-    '[void][System.Management.Automation.Language.Parser]::ParseFile("C:\\\\tdvr\\\\%s", [ref]$null, [ref]$e)\n'
-    'if ($e) { "PARSE FAIL"; $e | Select-Object -First 3 | ForEach-Object { "  " + $_.Message } } else { "parse=OK" }\n'
-    'Remove-Item C:\\\\tdvr\\\\b64in.txt -EA 0\n'
-) % (name, name, name, name)
+script = """$x = [IO.File]::ReadAllText("C:\\tdvr\\b64in.txt")
+[IO.File]::WriteAllBytes("C:\\tdvr\\%s", [Convert]::FromBase64String($x))
+"md5   " + (Get-FileHash C:\\tdvr\\%s -Algorithm MD5).Hash
+"bytes " + (Get-Item C:\\tdvr\\%s).Length
+$e = $null
+[void][System.Management.Automation.Language.Parser]::ParseFile("C:\\tdvr\\%s", [ref]$null, [ref]$e)
+if ($e) { "parse=FAIL"; $e | Select-Object -First 3 | ForEach-Object { "  " + $_.Message } } else { "parse=OK" }
+Remove-Item C:\\tdvr\\b64in.txt -EA 0
+""" % (name, name, name, name)
 
 # the decode script is small, so it goes over the same channel as the payload
 d = base64.b64encode(script.encode()).decode()
@@ -51,8 +50,18 @@ sh('powershell -NoProfile -Command "[IO.File]::WriteAllBytes(\'C:\\\\tdvr\\\\dec
 r = sh("powershell -NoProfile -ExecutionPolicy Bypass -File C:\\\\tdvr\\\\decode.ps1")
 print(r.stdout.strip())
 got = ""
+parsed = None
 for line in r.stdout.splitlines():
-    if line.strip().upper().startswith("MD5"):
-        got = line.split()[-1].lower()
-print("local md5  %s  %s" % (want, "MATCH" if got == want else "MISMATCH"))
-sys.exit(0 if got == want else 1)
+    t = line.strip()
+    if t.upper().startswith("MD5"):
+        got = t.split()[-1].lower()
+    if t.lower().startswith("parse="):
+        parsed = t.split("=", 1)[1].strip()
+ok = got == want
+# A file that arrived intact and does not parse is a failure, and reporting it
+# as a success is how a broken script gets measured on the VM instead of here.
+if name.endswith(".ps1") and parsed != "OK":
+    print("PARSE FAILED ON THE VM -- the script would fail there, not here")
+    sys.exit(2)
+print("local md5  %s  %s" % (want, "MATCH" if ok else "MISMATCH"))
+sys.exit(0 if ok else 1)
