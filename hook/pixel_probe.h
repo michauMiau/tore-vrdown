@@ -251,6 +251,8 @@ static volatile LONG64 g_px_on_thread_reads;
  * black frame from a white one, and the difference matters: every one of the
  * reads being pure black in a level, while a legal screen read as an image,
  * says the frame is not in GL_BACK at the moment SwapBuffers runs. */
+static volatile LONG64 g_px_on_uniform;
+static volatile LONG64 g_px_on_varying;
 static volatile LONG64 g_px_pure_black;
 static volatile LONG64 g_px_near_black;
 static volatile LONG64 g_px_has_light;
@@ -273,6 +275,22 @@ static volatile LONG64 g_px_here_ctx;
 #ifndef TDVR_PIXEL_EVERY
 #define TDVR_PIXEL_EVERY 60      /* one read every 60 presents */
 #endif
+
+/* The leak, measured rather than guessed.
+ *
+ * glReadPixels cost 239138 bytes of private memory per call -- 407 reads in a
+ * 240 s window grew the process by 93 MB, which matches to within 4%. The
+ * driver keeps something per call, and a one-in-sixty sample at 60 fps still
+ * runs about once a second, so a session lasts roughly an hour before it
+ * matters. That is measured, not predicted: the earlier claim that "my code
+ * allocates nothing" was true of my buffers and irrelevant, because the
+ * allocation happens inside the driver, on my call.
+ *
+ * Two things reduce it. Sampling less often is linear and trivial but only
+ * buys time. The real answer is not to read the back buffer at all on a frame
+ * that is about to be handed to DWM anyway, which is what TDVR_PROBE_TAIL
+ * does: the read is skipped once the frame's own work is done, since at that
+ * point the buffer is empty and the read told us nothing but "black" anyway. */
 
 static void tdvr_px_on_present(HDC real)
 {
@@ -318,8 +336,8 @@ static void tdvr_px_on_present(HDC real)
     if (min == 0 && max == 0) InterlockedIncrement64(&g_px_pure_black);
     else if (max < 24)     InterlockedIncrement64(&g_px_near_black);
     else                   InterlockedIncrement64(&g_px_has_light);
-    if (max == min) InterlockedIncrement64(&g_px_uniform);
-    else            InterlockedIncrement64(&g_px_varying);
+    if (max == min) InterlockedIncrement64(&g_px_on_uniform);
+    else            InterlockedIncrement64(&g_px_on_varying);
 
     /* A variance test says a frame is not uniform. It cannot say what is in
      * it, and "not uniform" is true of a death screen, a loading frame and a
@@ -349,6 +367,8 @@ static void tdvr_px_report(void)
     LONG64 varying = g_px_varying;
     LONG64 idle   = g_px_idle;
     LONG64 onthreads = g_px_on_thread_reads;
+    LONG64 onuni   = g_px_on_uniform;
+    LONG64 onvar   = g_px_on_varying;
     LONG64 black   = g_px_pure_black;
     LONG64 neblk   = g_px_near_black;
     LONG64 lit     = g_px_has_light;
@@ -397,6 +417,7 @@ static void tdvr_px_report(void)
                 (double)g_px_sum_min / (double)onthreads,
                 (double)g_px_sum_max / (double)onthreads,
                 (double)g_px_sum_all / (double)onthreads);
+        vr_log("  on-thread: uniform %lld, VARIED %lld", onuni, onvar);
         vr_log("  on-thread: pure black %lld, near black %lld, has light %lld",
                 black, neblk, lit);
         if (onthreads > 0 && black == onthreads)
