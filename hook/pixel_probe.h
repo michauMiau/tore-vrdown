@@ -241,6 +241,19 @@ static void tdvr_px_sample(void)
 static volatile LONG64 g_px_sum_min;
 static volatile LONG64 g_px_sum_max;
 static volatile LONG64 g_px_sum_all;
+/* The handler's own sample count. It cannot share g_px_reads with the worker:
+ * that counter belongs to tdvr_px_sample, which runs on a different thread and
+ * has never had a context. Dividing the handler's brightness by the worker's
+ * read count produced "0" for a healthy build, and the two numbers in one
+ * report were describing two different threads without saying so. */
+static volatile LONG64 g_px_on_thread_reads;
+/* Three-way split of what the read actually returned. "flat" cannot tell a
+ * black frame from a white one, and the difference matters: every one of the
+ * reads being pure black in a level, while a legal screen read as an image,
+ * says the frame is not in GL_BACK at the moment SwapBuffers runs. */
+static volatile LONG64 g_px_pure_black;
+static volatile LONG64 g_px_near_black;
+static volatile LONG64 g_px_has_light;
 
 #if TDVR_IAT_CALL_STUB
 #if TDVR_PIXEL_PROBE
@@ -294,6 +307,7 @@ static void tdvr_px_on_present(HDC real)
         InterlockedIncrement64(&g_px_blank_gl);
         return;
     }
+    InterlockedIncrement64(&g_px_on_thread_reads);
     int min = 255, max = 0;
     int total = TDVR_PROBE_W * TDVR_PROBE_H * 3;
     for (int i = 0; i < total; i++) {
@@ -301,6 +315,9 @@ static void tdvr_px_on_present(HDC real)
         if (v < min) min = v;
         if (v > max) max = v;
     }
+    if (min == 0 && max == 0) InterlockedIncrement64(&g_px_pure_black);
+    else if (max < 24)     InterlockedIncrement64(&g_px_near_black);
+    else                   InterlockedIncrement64(&g_px_has_light);
     if (max == min) InterlockedIncrement64(&g_px_uniform);
     else            InterlockedIncrement64(&g_px_varying);
 
@@ -331,6 +348,10 @@ static void tdvr_px_report(void)
     LONG64 flat    = g_px_uniform;
     LONG64 varying = g_px_varying;
     LONG64 idle   = g_px_idle;
+    LONG64 onthreads = g_px_on_thread_reads;
+    LONG64 black   = g_px_pure_black;
+    LONG64 neblk   = g_px_near_black;
+    LONG64 lit     = g_px_has_light;
 #if TDVR_IAT_CALL_STUB && TDVR_PIXEL_PROBE
     LONG64 onthr  = g_px_on_game_thread;
     LONG64 thdc   = g_px_here_hdc;
@@ -366,15 +387,23 @@ static void tdvr_px_report(void)
     vr_log("  glReadPixels error   %lld", glerr);
     vr_log("  flat (not a frame)   %lld", flat);
     vr_log("  VARIED (real pixels) %lld", varying);
-    if (reads > 0) {
+    if (onthreads > 0) {
         /* Averages over the samples that actually read a frame. Without these
          * three numbers "VARIED" is a yes/no that cannot distinguish a
          * gameplay frame from a loading screen or a death screen -- all three
          * are non-uniform, and only the levels say which one it was. */
-        vr_log("  brightness  min %.0f  max %.0f  mid %.0f   (over %lld reads)",
-                (double)g_px_sum_min / (double)reads,
-                (double)g_px_sum_max / (double)reads,
-                (double)g_px_sum_all / (double)reads, reads);
+        vr_log("  ON-THREAD reads    %lld", onthreads);
+        vr_log("  brightness  min %.0f  max %.0f  mid %.0f",
+                (double)g_px_sum_min / (double)onthreads,
+                (double)g_px_sum_max / (double)onthreads,
+                (double)g_px_sum_all / (double)onthreads);
+        vr_log("  on-thread: pure black %lld, near black %lld, has light %lld",
+                black, neblk, lit);
+        if (onthreads > 0 && black == onthreads)
+            vr_log("  -> every read returned pure black (0,0,0). GL_BACK is");
+            vr_log("     empty at the moment SwapBuffers runs, so the frame is");
+            vr_log("     already gone or was never drawn there. Reading earlier,");
+            vr_log("     or reading a different buffer, is the next question.");
     }
 
     if (!reads) {
