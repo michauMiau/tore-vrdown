@@ -100,3 +100,21 @@ desktop.ini
 # in docs/ points at them. The 34 that the write-ups actually cite are kept
 # under tools/ps/. Re-enable locally with:  git add -f <file>.ps1
 /*.ps1
+
+# Exceptions, and the reason each one earns it. The rule above is right -- a
+# directory of 340 unmaintained probes is not documentation. But some scripts
+# here are instruments rather than probes, they get re-run when a measurement has
+# to be repeated, and leaving them untracked means a checkout loses the very tool
+# the next measurement depends on. That happened: leak_slope.ps1 settled whether
+# a multi-gigabyte growth was mine or the game's, and it existed only on one
+# disk.
+#
+# So an exception is added here deliberately, with its reason, and the file is
+# then held to the standard of the rest of the tree.
+!leak_slope.ps1    # separates private-bytes growth by reads vs presents; the
+                   # measurement that proved glReadPixels leaks 240 KB per call
+!watchdog.ps1      # liveness sampling: CPU delta and log growth, since a
+                   # crashed process keeps its pid and Responding=True
+!rate.ps1          # measures the reporter's real period from file growth,
+                   # instead of assuming one
+
