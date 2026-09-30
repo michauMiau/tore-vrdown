@@ -124,3 +124,7 @@ desktop.ini
 # were never in the repository because of it.
 !run_v1.ps1
 !gline.ps1
+!run.ps1
+!run_v6.ps1
+!send.py
+!logcensus.ps1

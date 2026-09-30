@@ -1,6 +1,6 @@
-# Start the game, wait until it is genuinely rendering, inject vr_v1, watch.
+# Start the game, wait until it is genuinely rendering, inject vr_v6, watch.
 #
-# vr_v1 adds a pbuffer: our own 512x512 off-screen context, on its own thread,
+# vr_v6 adds a pbuffer: our own 512x512 off-screen context, on its own thread,
 # drawn and read back entirely by us. The point is to prove the pipeline
 # without reading the game's back buffer, because that read was measured at
 # 239138 bytes of private memory per call and it is the only thing in this
@@ -23,11 +23,11 @@ function A($s) { Add-Content $out -Value ("[" + (Get-Date -Format 'HH:mm:ss') + 
 $tag = [IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Path)
 $gd  = 'D:\SteamLibrary\steamapps\common\Teardown'
 $hf  = "$gd\tdvr_host.txt"
-$lf  = "$gd\vr_v1.log"
-$dll = 'C:\tdvr\vr_v1.dll'
+$lf  = "$gd\vr_v6.log"
+$dll = 'C:\tdvr\vr_v6.dll'
 $app = 1167630
 
-A "=== vr_v1: pbuffer, our own target, no read of the game ==="
+A "=== vr_v6: pbuffer, our own target, no read of the game ==="
 A ("dll " + (Get-Item $dll).Length + "B md5=" + (Get-FileHash $dll -Algorithm MD5).Hash)
 
 # Prove the host binary before the injector is given anything to attach to.
@@ -141,7 +141,7 @@ $base = $mod.BaseAddress.ToInt64()
 Set-Content -Path $hf -Value $base.ToString('x') -Encoding ASCII -NoNewline
 A ("tdvr_host.txt <- 0x" + $base.ToString('x'))
 
-A "injecting vr_v1"
+A "injecting vr_v6"
 $o = & 'C:\tdvr\injector_fresh.exe' --attach --dll $dll --noquit --timeout 30000 2>&1 | Out-String
 ($o -split "`r?`n") | Where-Object { $_ -match 'LoadLibrary|resolved|\[!\]' } | ForEach-Object { A ("  inj " + $_.Trim()) }
 if ($o -notmatch 'LoadLibraryA OK') { A "injector did not confirm; aborting before any conclusion"; exit }
