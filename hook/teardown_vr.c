@@ -1674,10 +1674,19 @@ static volatile LONG g_census_stop = 0;
  * inside it first, and with the class census off the definition vanished while
  * the CreateThread below still referenced it. */
 #if TDVR_IAT_CENSUS
+/* Report cadence. 2 s fills the log with ~750 B per pass and reached 2.5 MB
+ * over nine hours, which is unreadable and was also what made an external
+ * frame-rate calculation wrong by an order of magnitude: a 10 s measurement
+ * window covers five report lines, not one. 20 s keeps the log small while
+ * still sampling often enough to see a stall. */
+#ifndef TDVR_IAT_REPORT_MS
+#define TDVR_IAT_REPORT_MS 20000
+#endif
+
 static DWORD WINAPI iat_reporter(LPVOID arg) {
     (void)arg;
     for (;;) {
-        Sleep(2000);
+        Sleep(TDVR_IAT_REPORT_MS);
         td_iat_report();
     }
 }

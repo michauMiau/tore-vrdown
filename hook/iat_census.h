@@ -76,8 +76,30 @@ static const char *TDVR_IAT_LIBS[] = {
     "vulkan-1.dll", "GLU32.dll", "d3d9.dll",
 };
 
-/* Within those libraries, only these functions. See TDVR_IAT_ONLY below. */
-static const char *TDVR_IAT_FNS[] = { "SwapBuffers" };
+/* Within those libraries, only these functions.
+ *
+ * Why this list, and not just SwapBuffers: the question that blocks the VR
+ * design is whether a present equals a frame. SwapBuffers cannot answer it --
+ * in a windowed WGL app it hands the back buffer to DWM and returns, so it is
+ * not gated on the refresh rate even with vsync=1, and 138.59/s proved nothing
+ * about frame count.
+ *
+ * glClear, glDepthFunc, glColorMask, glPolygonMode and friends run exactly
+ * once per frame when the game sets frame state, independently of how many
+ * times anything is presented. Their rate IS the frame rate. Comparing it
+ * against SwapBuffers gives the presents-per-frame ratio directly, which is
+ * the number the whole stereo design depends on.
+ *
+ * The wide run already showed these carried identical counts to each other
+ * (4799 each), which is what a once-per-frame state block looks like. This
+ * list makes that measurable instead of inferred. */
+static const char *TDVR_IAT_FNS[] = {
+    "SwapBuffers",
+    "glClear", "glClearColor", "glDepthFunc", "glDepthMask",
+    "glColorMask", "glPolygonMode", "glStencilFunc", "glStencilMask",
+    "glStencilOp", "glViewport", "glEnable", "glBlendFunc",
+};
+
 
 /* The census that measured "41 hooked, 0 refused" followed the game from
  * 1731 MB down to 85 MB over twenty minutes and left it in a state where
